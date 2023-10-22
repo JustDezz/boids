@@ -29,6 +29,7 @@ namespace Tools.UnwrapNestingAttribute.Editor
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 		{
 			UnwrapAttribute unwrap = (UnwrapAttribute) attribute;
+			property.serializedObject.ApplyModifiedProperties();
 			property.serializedObject.Update();
 
 			Rect backgroundRect = position;

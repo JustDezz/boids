@@ -17,9 +17,14 @@ namespace Flocks.Behaviours
 		{
 			NativeArray<float3> positions = flock.Positions;
 			NativeArray<float3> velocities = flock.Velocities;
+			SpatialHashGrid<int> grid = flock.BoidsGrid;
 			FlockSettings settings = flock.FlockSettings;
 			Bounds softBounds = flock.SoftBounds;
-			BoidsJob job = new(positions, velocities, settings, softBounds, Time.deltaTime, _avoidanceFactor, _alignmentFactor, _cohesionFactor);
+			BoidsJob job = new(
+				positions, velocities, grid,
+				settings, softBounds, Time.deltaTime, 
+				_avoidanceFactor, _alignmentFactor, _cohesionFactor);
+			
 			return job.Schedule(flock.NumberOfAgents, dependency);
 		}
 	}

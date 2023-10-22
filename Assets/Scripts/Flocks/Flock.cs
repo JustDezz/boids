@@ -15,19 +15,21 @@ namespace Flocks
 	public class Flock : MonoBehaviour
 	{
 		[SerializeField] private GameObject _boidPrefab;
+		[SerializeField] private FlockSettings _flockSettings;
+		[SerializeField] [Min(0)] private int _numberOfAgents;
+		[SerializeField] [Min(0)] private float _density = 0.1f;
+		
+		[Space]
 		[SerializeField] [Unwrap] private FlockBehaviour[] _behaviours;
 
 		[Space]
-		[SerializeField] [Min(0)] private int _numberOfAgents;
-		[SerializeField] [Min(0)] private float _density = 0.1f;
-		[SerializeField] private FlockSettings _flockSettings;
-	
-		[Space]
 		[SerializeField] private Bounds _softBounds;
 		[SerializeField] private Bounds _hardBounds;
+		[SerializeField] private Vector3 _cellSize;
 
 		private NativeArray<float3> _positions;
 		private NativeArray<float3> _velocities;
+		private SpatialHashGrid<int> _boidsGrid;
 		private TransformAccessArray _transformAccessArray;
 		private Transform[] _transforms;
 		private JobHandle _boidsHandle;
@@ -36,6 +38,7 @@ namespace Flocks
 		public FlockSettings FlockSettings => _flockSettings;
 		public NativeArray<float3> Positions => _positions;
 		public NativeArray<float3> Velocities => _velocities;
+		public SpatialHashGrid<int> BoidsGrid => _boidsGrid;
 
 		public Bounds SoftBounds => _softBounds;
 		public Bounds HardBounds => _hardBounds;
@@ -72,6 +75,9 @@ namespace Flocks
 
 		private void Update()
 		{
+			_boidsGrid = new SpatialHashGrid<int>(_hardBounds, _cellSize, _numberOfAgents, Allocator.TempJob);
+			for (int i = 0; i < _positions.Length; i++) _boidsGrid.Add(_positions[i], i);
+
 			JobHandle handle = default;
 			foreach (FlockBehaviour behaviour in _behaviours) handle = behaviour.Schedule(this, handle);
 			ApplyTransformsJob transformsJob = new(_positions, _velocities, _hardBounds.min, _hardBounds.max, Time.deltaTime);
@@ -80,7 +86,11 @@ namespace Flocks
 			_boidsHandle = handle;
 		}
 
-		private void LateUpdate() => _boidsHandle.Complete();
+		private void LateUpdate()
+		{
+			_boidsHandle.Complete();
+			_boidsGrid.Dispose();
+		}
 
 		private void OnDestroy() => Dispose();
 

@@ -13,8 +13,8 @@ namespace Flocks.Jobs
 		private NativeArray<float3> _velocities;
 	
 		[ReadOnly] private readonly float _fov;
-		[ReadOnly] private readonly float _sqrRadius;
-		[ReadOnly] private readonly float _sqrAvoidRadius;
+		[ReadOnly] private readonly float _radius;
+		[ReadOnly] private readonly float _avoidRadius;
 		[ReadOnly] private readonly float2 _speed;
 		[ReadOnly] private readonly float _deltaTurn;
 	
@@ -24,17 +24,21 @@ namespace Flocks.Jobs
 		[ReadOnly] private readonly float _avoidanceFactor;
 		[ReadOnly] private readonly float _alignmentFactor;
 		[ReadOnly] private readonly float _cohesionFactor;
+		
+		[ReadOnly] private SpatialHashGrid<int> _boidsGrid;
 
 		public BoidsJob(NativeArray<float3> positions, NativeArray<float3> velocities,
+			SpatialHashGrid<int> boidsGrid,
 			FlockSettings flockSettings, Bounds bounds, float deltaTime, 
 			float avoidanceFactor, float alignmentFactor, float cohesionFactor)
 		{
+			_boidsGrid = boidsGrid;
 			_velocities = velocities;
 			_positions = positions;
 		
 			_fov = flockSettings.FOV;
-			_sqrRadius = flockSettings.InfluenceRadius * flockSettings.InfluenceRadius;
-			_sqrAvoidRadius = flockSettings.AvoidRadius * flockSettings.AvoidRadius;
+			_radius = flockSettings.InfluenceRadius;
+			_avoidRadius = flockSettings.AvoidRadius;
 			_speed = flockSettings.Speed;
 			_deltaTurn = flockSettings.TurnSpeed * deltaTime;
 		
@@ -52,29 +56,32 @@ namespace Flocks.Jobs
 			float3 velocity = _velocities[index];
 			float3 direction = math.normalize(velocity);
 		
-			int agentsCount = _velocities.Length;
+			float sqrRadius = _radius * _radius;
+			float sqrAvoidRadius = _avoidRadius * _avoidRadius;
 
 			int consideredNeighbours = 0;
 			int avoidedNeighbours = 0;
 			float3 avoidanceVector = float3.zero;
 			float3 alignmentVector = float3.zero;
 			float3 centerOfMass = float3.zero;
-		
-			for (int i = 0; i < agentsCount; i++)
+
+			using SpatialHashGrid<int>.AreaEnumerator enumerator = _boidsGrid.GetEnumerator(position, Vector3.one * _radius);
+			while (enumerator.MoveNext())
 			{
+				int i = enumerator.Current;
 				if (i == index) continue;
 			
 				float3 otherPosition = _positions[i];
 				float3 offset = otherPosition - position;
 				float sqrDistance = math.lengthsq(offset);
-				if (sqrDistance > _sqrRadius) continue;
+				if (sqrDistance > sqrRadius) continue;
 
 				float distance = math.sqrt(sqrDistance);
 				float3 offsetDirection = offset / distance;
 				float dot = math.dot(direction, offsetDirection);
 				if (dot < _fov) continue;
 			
-				if (sqrDistance <= _sqrAvoidRadius)
+				if (sqrDistance <= sqrAvoidRadius)
 				{
 					avoidedNeighbours++;
 					avoidanceVector -= offset;

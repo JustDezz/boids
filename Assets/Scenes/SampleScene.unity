@@ -154,11 +154,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _boidPrefab: {fileID: 248473348570553626, guid: aef2d43a59d8546498ae6b2988a71ee3,
     type: 3}
-  _behaviours:
-  - {fileID: 11400000, guid: c4217484bc6d83a4fbc9a710c9e8a59f, type: 2}
-  - {fileID: 11400000, guid: a04e60e6e77867c4bae65d4e9a9ad90e, type: 2}
-  _numberOfAgents: 1000
-  _density: 0.01
   _flockSettings:
     _speed:
       x: 4
@@ -167,12 +162,18 @@ MonoBehaviour:
     _fov: 0
     _influenceRadius: 2
     _avoidRadius: 0.2
+  _numberOfAgents: 1000
+  _density: 0.01
+  _behaviours:
+  - {fileID: 11400000, guid: c4217484bc6d83a4fbc9a710c9e8a59f, type: 2}
+  - {fileID: 11400000, guid: a04e60e6e77867c4bae65d4e9a9ad90e, type: 2}
   _softBounds:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 5, y: 5, z: 5}
+    m_Extent: {x: 7.5, y: 7.5, z: 7.5}
   _hardBounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 10, y: 10, z: 10}
+  _cellSize: {x: 5, y: 5, z: 5}
 --- !u!4 &233273978
 Transform:
   m_ObjectHideFlags: 0
