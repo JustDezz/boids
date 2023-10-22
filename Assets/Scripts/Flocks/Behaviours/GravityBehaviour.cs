@@ -14,7 +14,7 @@ namespace Flocks.Behaviours
 		{
 			if (math.all(_gravity == float3.zero)) return dependency;
 			GravityJob job = new(flock.Velocities, _gravity, Time.deltaTime);
-			return job.Schedule(flock.NumberOfAgents, dependency);
+			return job.Schedule(flock.NumberOfAgents, 0, dependency);
 		}
 	}
 }

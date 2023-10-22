@@ -4,7 +4,7 @@ using Unity.Mathematics;
 
 namespace Flocks.Jobs
 {
-	public struct GravityJob : IJobFor
+	public struct GravityJob : IJobParallelFor
 	{
 		private NativeArray<float3> _velocities;
 		[ReadOnly] private readonly float3 _deltaGravity;

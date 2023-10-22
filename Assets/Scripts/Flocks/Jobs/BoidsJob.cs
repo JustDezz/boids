@@ -7,10 +7,15 @@ using UnityEngine;
 namespace Flocks.Jobs
 {
 	[BurstCompile]
-	public struct BoidsJob : IJobFor
+	public struct BoidsJob : IJobParallelFor
 	{
 		[ReadOnly] private readonly NativeArray<float3> _positions;
-		private NativeArray<float3> _velocities;
+		
+		// As the boids are independent from one another in their nature, 
+		// the race conditions doesn't affect anything, thus disabling 
+		// parallel for restriction allows us to gain extra performance
+		// by using IJobParallelFor instead of IJobFor
+		[NativeDisableParallelForRestriction] private NativeArray<float3> _velocities;
 	
 		[ReadOnly] private readonly float _fov;
 		[ReadOnly] private readonly float _radius;
@@ -27,9 +32,10 @@ namespace Flocks.Jobs
 		
 		[ReadOnly] private SpatialHashGrid<int> _boidsGrid;
 
-		public BoidsJob(NativeArray<float3> positions, NativeArray<float3> velocities,
+		public BoidsJob(
+			NativeArray<float3> positions, NativeArray<float3> velocities,
 			SpatialHashGrid<int> boidsGrid,
-			FlockSettings flockSettings, Bounds bounds, float deltaTime, 
+			FlockSettings flockSettings, Bounds bounds, float deltaTime,
 			float avoidanceFactor, float alignmentFactor, float cohesionFactor)
 		{
 			_boidsGrid = boidsGrid;
@@ -55,7 +61,7 @@ namespace Flocks.Jobs
 			float3 position = _positions[index];
 			float3 velocity = _velocities[index];
 			float3 direction = math.normalize(velocity);
-		
+
 			float sqrRadius = _radius * _radius;
 			float sqrAvoidRadius = _avoidRadius * _avoidRadius;
 
@@ -70,7 +76,7 @@ namespace Flocks.Jobs
 			{
 				int i = enumerator.Current;
 				if (i == index) continue;
-			
+
 				float3 otherPosition = _positions[i];
 				float3 offset = otherPosition - position;
 				float sqrDistance = math.lengthsq(offset);
@@ -80,7 +86,7 @@ namespace Flocks.Jobs
 				float3 offsetDirection = offset / distance;
 				float dot = math.dot(direction, offsetDirection);
 				if (dot < _fov) continue;
-			
+
 				if (sqrDistance <= sqrAvoidRadius)
 				{
 					avoidedNeighbours++;

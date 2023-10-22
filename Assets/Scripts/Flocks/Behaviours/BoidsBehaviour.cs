@@ -25,7 +25,7 @@ namespace Flocks.Behaviours
 				settings, softBounds, Time.deltaTime, 
 				_avoidanceFactor, _alignmentFactor, _cohesionFactor);
 			
-			return job.Schedule(flock.NumberOfAgents, dependency);
+			return job.Schedule(flock.NumberOfAgents, 0, dependency);
 		}
 	}
 }
