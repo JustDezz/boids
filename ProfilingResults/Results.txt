@@ -1,0 +1,10 @@
+Number of boids = 1000, boid radius = 2
+No Hashing 				=> ~78ms
+Spatial hashing, cell size = 1 		=> ~26.5ms
+Spatial hashing, cell size = 2 		=> ~7.5ms
+Spatial hashing, cell size = 3 		=> ~5ms
+Spatial hashing, cell size = 4 		=> ~4ms
+Spatial hashing, cell size = 5 		=> ~5.75ms
+Spatial hashing, cell size = 4, Burst	=> ~0.21ms
+
+Optimal grid size == 2 * boid radius
