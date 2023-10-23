@@ -2,59 +2,71 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 
-public struct SpatialHashGrid<T> : IDisposable where T : unmanaged
+[BurstCompatible]
+public struct SpatialHashGrid<T> : IDisposable where T : struct, IEquatable<T>
 {
-	private readonly Bounds _actualBounds;
-	private readonly Vector3Int _cells;
-	private readonly Vector3 _cellSize;
+	private readonly int3 _cells;
+	private readonly float3 _cellSize;
+	private readonly float3 _gridMin;
+	private readonly float3 _gridMax;
 	private NativeMultiHashMap<int, T> _map;
 
-	public SpatialHashGrid(Bounds bounds, Vector3 cellSize, int capacity, Allocator allocator)
+	public SpatialHashGrid(Bounds bounds, float3 cellSize, int capacity, Allocator allocator)
 	{
 		_cellSize = cellSize;
-		// Small padding
-		Vector3 boundsSize = bounds.size + Vector3.one;
+		float3 boundsSize = bounds.size;
 		int xCells = Mathf.CeilToInt(boundsSize.x / _cellSize.x);
 		int yCells = Mathf.CeilToInt(boundsSize.y / _cellSize.y);
 		int zCells = Mathf.CeilToInt(boundsSize.z / _cellSize.z);
-		_cells = new Vector3Int(xCells, yCells, zCells);
+		_cells = new int3(xCells, yCells, zCells);
 
-		Vector3 actualSize = new(xCells * _cellSize.x, yCells * _cellSize.y, zCells * _cellSize.z);
-		_actualBounds = new Bounds(bounds.center, actualSize);
+		float3 actualSize = new(xCells * _cellSize.x, yCells * _cellSize.y, zCells * _cellSize.z);
+		float3 center = bounds.center;
+		_gridMin = center - actualSize;
+		_gridMax = center + actualSize;
 		_map = new NativeMultiHashMap<int, T>(capacity, allocator);
 	}
 
-	public void Add(Vector3 position, T item)
+	public void Add(float3 position, T item)
 	{
 		int index = PositionToIndex(position);
 		_map.Add(index, item);
 	}
 
-	public AreaEnumerator GetEnumerator(Vector3 position, Vector3 extents) => new(ref this, position, extents);
+	public void Remove(float3 position, T item)
+	{
+		int index = PositionToIndex(position);
+		_map.Remove(index, item);
+	}
 
-	public IEnumerable<T> GetElements(Vector3 position, float radius) => GetElements(position, Vector3.one * radius);
-	public IEnumerable<T> GetElements(Vector3 position, Vector3 extents)
+	public AreaEnumerator GetEnumerator(float3 position, float3 extents) => new(ref this, position, extents);
+
+	public void Clear() => _map.Clear();
+
+	public IEnumerable<T> GetElements(float3 position, float radius) => GetElements(position, (float3) radius);
+	public IEnumerable<T> GetElements(float3 position, float3 extents)
 	{
 		using AreaEnumerator enumerator = GetEnumerator(position, extents);
 		while (enumerator.MoveNext()) yield return enumerator.Current;
 	}
 
-	private int PositionToIndex(Vector3 position)
+	private int PositionToIndex(float3 position)
 	{
-		Vector3Int gridIndex = ToCell(position);
+		int3 gridIndex = ToCell(position);
 		return CellToIndex(gridIndex);
 	}
-	private int CellToIndex(Vector3Int cell) => cell.x + cell.y * _cells.x + cell.z * _cells.x * _cells.y; 
+	private int CellToIndex(int3 cell) => cell.x + cell.y * _cells.x + cell.z * _cells.x * _cells.y; 
 
-	private Vector3Int ToCell(Vector3 position)
+	private int3 ToCell(float3 position)
 	{
-		Vector3 gridSpace = position - _actualBounds.min;
-		int xCells = Mathf.CeilToInt(gridSpace.x / _cellSize.x);
-		int yCells = Mathf.CeilToInt(gridSpace.y / _cellSize.y);
-		int zCells = Mathf.CeilToInt(gridSpace.z / _cellSize.z);
-		return new Vector3Int(xCells, yCells, zCells);
+		float3 gridSpace = position - _gridMin;
+		int xCells = Mathf.FloorToInt(gridSpace.x / _cellSize.x);
+		int yCells = Mathf.FloorToInt(gridSpace.y / _cellSize.y);
+		int zCells = Mathf.FloorToInt(gridSpace.z / _cellSize.z);
+		return new int3(xCells, yCells, zCells);
 	}
 
 	public void Dispose() => _map.Dispose();
@@ -62,10 +74,10 @@ public struct SpatialHashGrid<T> : IDisposable where T : unmanaged
 	public struct AreaEnumerator : IEnumerator<T>
 	{
 		private SpatialHashGrid<T> _grid;
-		private readonly Vector3Int _cells;
-		private readonly Vector3Int _cellOffset;
+		private readonly int3 _cells;
+		private readonly int3 _cellOffset;
 		
-		private Vector3Int _cellIndex;
+		private int3 _cellIndex;
 		private NativeMultiHashMap<int, T>.Enumerator _values;
 
 		public AreaEnumerator(ref SpatialHashGrid<T> grid, Vector3 position, Vector3 extents)
@@ -76,13 +88,13 @@ public struct SpatialHashGrid<T> : IDisposable where T : unmanaged
 			Vector3 min = position - extents;
 			Vector3 max = position + extents;
 
-			Vector3Int minIndex = grid.ToCell(min);
-			Vector3Int maxIndex = grid.ToCell(max);
+			int3 minIndex = grid.ToCell(min);
+			int3 maxIndex = grid.ToCell(max);
 
 			_cellOffset = minIndex;
 			_cells = maxIndex - minIndex;
 			
-			_cellIndex = -Vector3Int.one;
+			_cellIndex = -1;
 			_values = default;
 		}
 	
@@ -102,15 +114,15 @@ public struct SpatialHashGrid<T> : IDisposable where T : unmanaged
 
 		private bool PerformMove(out bool hasValues)
 		{
-			if (_cellIndex != -Vector3Int.one)
+			if (math.any(_cellIndex != -1))
 			{
 				hasValues = true;
 				if (_values.MoveNext()) return true;
 				if (IncrementIndex(0) && IncrementIndex(1) && IncrementIndex(2)) return false;
 			}
-			else _cellIndex = Vector3Int.zero;
+			else _cellIndex = int3.zero;
 
-			Vector3Int cell = _cellIndex + _cellOffset;
+			int3 cell = _cellIndex + _cellOffset;
 			int index = _grid.CellToIndex(cell);
 			_values = _grid._map.GetValuesForKey(index);
 			hasValues = _values.MoveNext();
@@ -125,7 +137,7 @@ public struct SpatialHashGrid<T> : IDisposable where T : unmanaged
 			return true;
 		}
 	
-		public void Reset() => _cellIndex = -Vector3Int.one;
+		public void Reset() => _cellIndex = -1;
 	
 		public T Current => _values.Current;
 	

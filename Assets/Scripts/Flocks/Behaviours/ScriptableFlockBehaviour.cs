@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Flocks.Behaviours
 {
-	public abstract class FlockBehaviour : ScriptableObject
+	public abstract class ScriptableFlockBehaviour : ScriptableObject, IFlockBehaviour
 	{
 #if UNITY_EDITOR
 		protected const string DataPath = "Data/Flock/"; 

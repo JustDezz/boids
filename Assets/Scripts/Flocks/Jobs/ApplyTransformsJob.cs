@@ -1,6 +1,7 @@
 ﻿using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.Jobs;
 
 namespace Flocks.Jobs
@@ -17,10 +18,10 @@ namespace Flocks.Jobs
 
 		public ApplyTransformsJob(
 			NativeArray<float3> positions, NativeArray<float3> velocities,
-			float3 minPosition, float3 maxPosition, float deltaTime)
+			Bounds bounds, float deltaTime)
 		{
-			_maxPosition = maxPosition;
-			_minPosition = minPosition;
+			_maxPosition = bounds.max;
+			_minPosition = bounds.min;
 			_positions = positions;
 			_velocities = velocities;
 			_deltaTime = deltaTime;

@@ -71,7 +71,7 @@ namespace Flocks.Jobs
 			float3 alignmentVector = float3.zero;
 			float3 centerOfMass = float3.zero;
 
-			using SpatialHashGrid<int>.AreaEnumerator enumerator = _boidsGrid.GetEnumerator(position, Vector3.one * _radius);
+			using SpatialHashGrid<int>.AreaEnumerator enumerator = _boidsGrid.GetEnumerator(position, _radius);
 			while (enumerator.MoveNext())
 			{
 				int i = enumerator.Current;
@@ -80,7 +80,7 @@ namespace Flocks.Jobs
 				float3 otherPosition = _positions[i];
 				float3 offset = otherPosition - position;
 				float sqrDistance = math.lengthsq(offset);
-				if (sqrDistance > sqrRadius) continue;
+				if (sqrDistance > sqrRadius || sqrDistance == 0) continue;
 
 				float distance = math.sqrt(sqrDistance);
 				float3 offsetDirection = offset / distance;

@@ -29,8 +29,9 @@ namespace Tools.UnwrapNestingAttribute.Editor
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 		{
 			UnwrapAttribute unwrap = (UnwrapAttribute) attribute;
-			property.serializedObject.ApplyModifiedProperties();
-			property.serializedObject.Update();
+			SerializedObject so = property.serializedObject;
+			if (so.hasModifiedProperties) so.ApplyModifiedProperties();
+			so.Update();
 
 			Rect backgroundRect = position;
 			float indentSize = LineHeight * (EditorGUI.indentLevel + 1);
@@ -53,7 +54,7 @@ namespace Tools.UnwrapNestingAttribute.Editor
 				using (new EditorGUI.IndentLevelScope(indent))
 					DrawChildren(position, GetChildren(property));
 			
-			property.serializedObject.ApplyModifiedProperties();
+			so.ApplyModifiedProperties();
 		}
 
 		
@@ -70,10 +71,10 @@ namespace Tools.UnwrapNestingAttribute.Editor
 
 		private IEnumerable<SerializedProperty> GetChildren(SerializedProperty property)
 		{
-			_so ??= new SerializedObject(property.objectReferenceValue);
 			if (property.propertyType == SerializedPropertyType.ObjectReference)
 			{
 				if (property.objectReferenceValue == null) yield break;
+				_so ??= new SerializedObject(property.objectReferenceValue);
 				
 				_so.Update();
 				SerializedProperty soProperties = _so.GetIterator();

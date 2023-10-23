@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Flocks.Behaviours
 {
 	[CreateAssetMenu(menuName = DataPath + "Gravity Behaviour")]
-	public class GravityBehaviour : FlockBehaviour
+	public class GravityBehaviour : ScriptableFlockBehaviour
 	{
 		[SerializeField] private float3 _gravity;
 

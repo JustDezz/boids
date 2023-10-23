@@ -1,12 +1,15 @@
+using System.Linq;
 using Flocks.Behaviours;
 using Flocks.Jobs;
-using Tools.GizmosExtensions;
+using Tools.Pool;
+using Tools.RestrictTypeAttribute;
 using Tools.UnwrapNestingAttribute;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Jobs;
+using UnityEngine.Profiling;
 using Random = UnityEngine.Random;
 
 namespace Flocks
@@ -14,48 +17,57 @@ namespace Flocks
 	[DefaultExecutionOrder(-5000)]
 	public class Flock : MonoBehaviour
 	{
-		[SerializeField] private GameObject _boidPrefab;
+		[SerializeField] private World _world;
+
+		[Space]
+		[SerializeField] private GameObject[] _boidsPrefabs;
 		[SerializeField] private FlockSettings _flockSettings;
 		[SerializeField] [Min(0)] private int _numberOfAgents;
 		[SerializeField] [Min(0)] private float _density = 0.1f;
 		
 		[Space]
-		[SerializeField] [Unwrap] private FlockBehaviour[] _behaviours;
+		[SerializeField] [Restrict(typeof(IFlockBehaviour))] [Unwrap] private Object[] _behaviours;
+		
+		[Header("Spatial Hash Grid")]
+		[SerializeField] [Min(0.01f)] private Vector3 _cellSize = Vector3.one;
+		[SerializeField] [Min(0)] private float _gridRebuildDelay;
 
-		[Space]
-		[SerializeField] private Bounds _softBounds;
-		[SerializeField] private Bounds _hardBounds;
-		[SerializeField] private Vector3 _cellSize;
-
+		private IPool<Transform> _boidsPool;
+		private Transform[] _boids;
+		
 		private NativeArray<float3> _positions;
 		private NativeArray<float3> _velocities;
 		private SpatialHashGrid<int> _boidsGrid;
 		private TransformAccessArray _transformAccessArray;
-		private Transform[] _transforms;
-		private JobHandle _boidsHandle;
+
+		private JobHandle _jobHandle;
+		private float _lastGridRebuildTime;
 
 		public int NumberOfAgents => _numberOfAgents;
 		public FlockSettings FlockSettings => _flockSettings;
 		public NativeArray<float3> Positions => _positions;
 		public NativeArray<float3> Velocities => _velocities;
 		public SpatialHashGrid<int> BoidsGrid => _boidsGrid;
-
-		public Bounds SoftBounds => _softBounds;
-		public Bounds HardBounds => _hardBounds;
+		
+		public Bounds SoftBounds => _world.SoftBounds;
+		public Bounds HardBounds => _world.HardBounds;
 
 		private void Start() => InitAgents();
 
 		private void InitAgents()
 		{
-			if (_transforms != null)
+			if (_boids != null)
 			{
 				Dispose();
-				foreach (Transform t in _transforms) Destroy(t.gameObject);
+				foreach (Transform t in _boids) _boidsPool.Return(t);
 			}
 
+			_boidsPool ??= new MultiUnityPool<Transform>(_boidsPrefabs.Select(p => p.transform));
+
+			_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _numberOfAgents, Allocator.Persistent);
 			_positions = new NativeArray<float3>(_numberOfAgents, Allocator.Persistent);
 			_velocities = new NativeArray<float3>(_numberOfAgents, Allocator.Persistent);
-			_transforms = new Transform[_numberOfAgents];
+			_boids = new Transform[_numberOfAgents];
 		
 			float spawnRadius = _numberOfAgents * _density;
 			float2 speed = _flockSettings.Speed;
@@ -63,34 +75,53 @@ namespace Flocks
 			{
 				Vector3 position = Random.insideUnitSphere * spawnRadius;
 				Vector3 direction = Random.onUnitSphere;
+				Vector3 velocity = direction * Random.Range(speed.x, speed.y);
 
-				GameObject boid = Instantiate(_boidPrefab, position, Quaternion.LookRotation(direction), transform);
+				Transform boid = _boidsPool.Get();
+				boid.SetParent(transform, false);
+				boid.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
+
 				_positions[i] = position;
-				_velocities[i] = direction * Random.Range(speed.x, speed.y);
-				_transforms[i] = boid.transform;
+				_velocities[i] = velocity;
+				_boids[i] = boid.transform;
+				_boidsGrid.Add(position, i);
 			}
 
-			_transformAccessArray = new TransformAccessArray(_transforms);
+			_transformAccessArray = new TransformAccessArray(_boids);
+			_lastGridRebuildTime = Time.time;
 		}
 
 		private void Update()
 		{
-			_boidsGrid = new SpatialHashGrid<int>(_hardBounds, _cellSize, _numberOfAgents, Allocator.TempJob);
-			for (int i = 0; i < _positions.Length; i++) _boidsGrid.Add(_positions[i], i);
+			if (_lastGridRebuildTime + _gridRebuildDelay < Time.time) RebuildHashGrid();
 
 			JobHandle handle = default;
-			foreach (FlockBehaviour behaviour in _behaviours) handle = behaviour.Schedule(this, handle);
-			ApplyTransformsJob transformsJob = new(_positions, _velocities, _hardBounds.min, _hardBounds.max, Time.deltaTime);
+			foreach (Object item in _behaviours)
+			{
+				IFlockBehaviour behaviour = (IFlockBehaviour) item;
+				handle = behaviour.Schedule(this, handle);
+			}
+
+			ApplyTransformsJob transformsJob = new(_positions, _velocities, HardBounds, Time.deltaTime);
 			handle = transformsJob.Schedule(_transformAccessArray, handle);
 
-			_boidsHandle = handle;
+			_jobHandle = handle;
 		}
 
-		private void LateUpdate()
+		private void RebuildHashGrid()
 		{
-			_boidsHandle.Complete();
-			_boidsGrid.Dispose();
+#if ENABLE_PROFILER
+			Profiler.BeginSample("Build boids spatial hash grid");
+#endif
+			_boidsGrid.Clear();
+			for (int i = 0; i < _positions.Length; i++) _boidsGrid.Add(_positions[i], i);
+			_lastGridRebuildTime = Time.time;
+#if ENABLE_PROFILER
+			Profiler.EndSample();
+#endif
 		}
+
+		private void LateUpdate() => _jobHandle.Complete();
 
 		private void OnDestroy() => Dispose();
 
@@ -98,25 +129,17 @@ namespace Flocks
 		{
 			_positions.Dispose();
 			_velocities.Dispose();
+			_boidsGrid.Dispose();
 			_transformAccessArray.Dispose();
 		}
 
 		private void OnValidate()
 		{
 			_flockSettings.Validate();
-			Vector3 hardBoundsMin = Vector3.Min(_hardBounds.min, _softBounds.min);
-			Vector3 hardBoundsMax = Vector3.Max(_hardBounds.max, _softBounds.max);
-			_hardBounds.SetMinMax(hardBoundsMin, hardBoundsMax);
 		
 			if (!Application.isPlaying || Time.frameCount < 1) return;
-			if (_transforms.Length == _numberOfAgents) return;
+			if (_boids.Length == _numberOfAgents) return;
 			InitAgents();
-		}
-
-		private void OnDrawGizmos()
-		{
-			using (new GizmosColorScope(Color.blue)) Gizmos.DrawWireCube(_softBounds.center, _softBounds.size);
-			using (new GizmosColorScope(Color.red)) Gizmos.DrawWireCube(_hardBounds.center, _hardBounds.size);
 		}
 	}
 }

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Flocks.Behaviours
 {
 	[CreateAssetMenu(menuName = DataPath + "Boids Behaviour")]
-	public class BoidsBehaviour : FlockBehaviour
+	public class BoidsBehaviour : ScriptableFlockBehaviour
 	{
 		[SerializeField] [Range(0, 1)] private float _avoidanceFactor;
 		[SerializeField] [Range(0, 1)] private float _alignmentFactor;
