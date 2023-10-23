@@ -104,37 +104,37 @@ public struct SpatialHashGrid<T> : IDisposable where T : struct, IEquatable<T>
 	
 		public bool MoveNext()
 		{
-			while (PerformMove(out bool hasValues))
+			while (true)
 			{
-				if (hasValues) return true;
+				bool2 move = PerformMove();
+				if (!move.x) return false;
+				if (move.y) return true;
 			}
-
-			return false;
 		}
 
-		private bool PerformMove(out bool hasValues)
+		// .x displays if we can continue enumeration, .y shows if current cell has any elements in it
+		private bool2 PerformMove()
 		{
-			if (math.any(_cellIndex != -1))
+			if (_cellIndex.x != -1)
 			{
-				hasValues = true;
 				if (_values.MoveNext()) return true;
-				if (IncrementIndex(0) && IncrementIndex(1) && IncrementIndex(2)) return false;
+				if (++_cellIndex.x > _cells.x)
+				{
+					_cellIndex.x = 0;
+					if (++_cellIndex.y > _cells.y)
+					{
+						_cellIndex.y = 0;
+						if (++_cellIndex.z > _cells.z)
+							return new bool2(false, true);
+					}
+				}
 			}
 			else _cellIndex = int3.zero;
 
 			int3 cell = _cellIndex + _cellOffset;
 			int index = _grid.CellToIndex(cell);
 			_values = _grid._map.GetValuesForKey(index);
-			hasValues = _values.MoveNext();
-			return true;
-		}
-
-		private bool IncrementIndex(int component)
-		{
-			_cellIndex[component]++;
-			if (_cellIndex[component] <= _cells[component]) return false;
-			_cellIndex[component] = 0;
-			return true;
+			return new bool2(true, _values.MoveNext());
 		}
 	
 		public void Reset() => _cellIndex = -1;
