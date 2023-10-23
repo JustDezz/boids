@@ -165,12 +165,14 @@ MonoBehaviour:
     _influenceRadius: 2
     _avoidRadius: 0.3
     _poiRadius: 5
-  _numberOfAgents: 500
+  _maxNumberOfAgents: 1000
+  _initialNumberOfAgents: 100
   _density: 0.01
   _behaviours:
   - {fileID: 11400000, guid: c4217484bc6d83a4fbc9a710c9e8a59f, type: 2}
   - {fileID: 11400000, guid: a04e60e6e77867c4bae65d4e9a9ad90e, type: 2}
   - {fileID: 1949152730}
+  - {fileID: 11400000, guid: 7abd9bf20c86e8344877ddd80fbff041, type: 2}
   _cellSize: {x: 4, y: 4, z: 4}
   _gridRebuildDelay: 0
 --- !u!4 &233273978
@@ -521,7 +523,7 @@ MonoBehaviour:
   _controller: {fileID: 1949152731}
   _pointInfluence:
     x: 0
-    y: 1
+    y: 3
   _pointConsumeRadius: 0.5
 --- !u!114 &1949152731
 MonoBehaviour:
@@ -539,9 +541,9 @@ MonoBehaviour:
   _prefabs:
   - {fileID: 2831456331822314164, guid: 93c526b81669a844b9fe798647d2137d, type: 3}
   - {fileID: 2831456331822314164, guid: 7a3021d1de2147947a7cc3a65eda68d7, type: 3}
-  _maxNumberOfPoints: 10
+  _maxNumberOfPoints: 50
   _initialNumberOfPoints: 5
-  _spawnBatchSize: {x: 1, y: 2}
-  _respawnTime: {x: 1, y: 5}
+  _spawnBatchSize: {x: 3, y: 7}
+  _respawnTime: {x: 1, y: 3}
   _cellSize: {x: 10, y: 10, z: 10}
-  _gridRebuildDelay: 1
+  _gridRebuildDelay: 10

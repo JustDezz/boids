@@ -47,6 +47,6 @@ namespace PointsOfInterest.Behaviours
 			return depleteJob.Schedule(_controller.NumberOfPoints, dependency);
 		}
 
-		public void OnFlockUpdated() => _controller.UpdateUsages();
+		public void OnFlockUpdated(Flock flock) => _controller.UpdateUsages();
 	}
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Flocks.Behaviours;
 using Flocks.Jobs;
@@ -10,6 +11,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Jobs;
 using UnityEngine.Profiling;
+using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
 namespace Flocks
@@ -22,7 +24,8 @@ namespace Flocks
 		[Space]
 		[SerializeField] private GameObject[] _boidsPrefabs;
 		[SerializeField] private FlockSettings _flockSettings;
-		[SerializeField] [Min(0)] private int _numberOfAgents;
+		[SerializeField] [Min(0)] private int _maxNumberOfAgents;
+		[SerializeField] [Min(0)] private int _initialNumberOfAgents;
 		[SerializeField] [Min(0)] private float _density = 0.1f;
 		
 		[Space]
@@ -34,6 +37,7 @@ namespace Flocks
 
 		private IPool<Transform> _boidsPool;
 		private Transform[] _spawnedBoids;
+		private bool _initialized;
 		
 		private NativeArray<BoidData> _boids;
 		private SpatialHashGrid<int> _boidsGrid;
@@ -42,7 +46,7 @@ namespace Flocks
 		private JobHandle _jobHandle;
 		private float _lastGridRebuildTime;
 
-		public int NumberOfAgents => _numberOfAgents;
+		public int NumberOfAgents { get; private set; }
 		public FlockSettings FlockSettings => _flockSettings;
 		public NativeArray<BoidData> Boids => _boids;
 		public SpatialHashGrid<int> BoidsGrid => _boidsGrid;
@@ -54,39 +58,66 @@ namespace Flocks
 
 		private void InitAgents()
 		{
-			if (_spawnedBoids != null)
+			if (_initialized && _boids.Length != _maxNumberOfAgents)
 			{
-				Dispose();
-				foreach (Transform t in _spawnedBoids) _boidsPool.Return(t);
+				int previousLength = _boids.Length;
+
+				int toDestroy = NumberOfAgents - _maxNumberOfAgents;
+				for (int i = 0; i < toDestroy; i++) _boidsPool.Return(_spawnedBoids[--NumberOfAgents]);
+				
+				NativeArray<BoidData> boids = new(_maxNumberOfAgents, Allocator.Persistent);
+				NativeArray<BoidData>.Copy(_boids, boids, Mathf.Min(previousLength, _maxNumberOfAgents));
+				Transform[] spawnedBoids = new Transform[_maxNumberOfAgents];
+				Array.Copy(_spawnedBoids, spawnedBoids, _maxNumberOfAgents);
+				
+				_boids.Dispose();
+				_boidsGrid.Dispose();
+				_transformAccessArray.Dispose();
+
+				_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
+				_boids = boids;
+				_spawnedBoids = spawnedBoids;
+				_transformAccessArray = new TransformAccessArray(_spawnedBoids);
+			}
+			else
+			{
+				_boidsPool = new MultiUnityPool<Transform>(_boidsPrefabs.Select(p => p.transform));
+				_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
+				_boids = new NativeArray<BoidData>(_maxNumberOfAgents, Allocator.Persistent);
+				_spawnedBoids = new Transform[_maxNumberOfAgents];
 			}
 
-			_boidsPool ??= new MultiUnityPool<Transform>(_boidsPrefabs.Select(p => p.transform));
+			_initialized = true;
 
-			_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _numberOfAgents, Allocator.Persistent);
-			_boids = new NativeArray<BoidData>(_numberOfAgents, Allocator.Persistent);
-			_spawnedBoids = new Transform[_numberOfAgents];
-		
-			float spawnRadius = _numberOfAgents * _density;
-			float2 speed = _flockSettings.Speed;
-			for (int i = 0; i < _numberOfAgents; i++)
+			int toSpawn = _initialNumberOfAgents - NumberOfAgents;
+			if (toSpawn <= 0) return;
+			
+			float spawnRadius = toSpawn * _density;
+			float2 speedLimit = _flockSettings.Speed;
+			for (int i = 0; i < toSpawn; i++)
 			{
 				Vector3 position = Random.insideUnitSphere * spawnRadius;
 				Vector3 direction = Random.onUnitSphere;
-				Vector3 velocity = direction * Random.Range(speed.x, speed.y);
+				float speed = Random.Range(speedLimit.x, speedLimit.y);
 
-				Transform boid = _boidsPool.Get();
-				// Boids have to have different root objects to be properly parallelized 
-				// on multiple cores in IJobParallelForTransform
-				boid.SetParent(null, false);
-				boid.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
-
-				_boids[i] = new BoidData(position, velocity);
-				_spawnedBoids[i] = boid.transform;
-				_boidsGrid.Add(position, i);
+				SpawnBoid(position, direction, speed);
 			}
-
-			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
 			_lastGridRebuildTime = Time.time;
+			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
+		}
+
+		private void SpawnBoid(Vector3 position, Vector3 direction, float speed)
+		{
+			Transform boid = _boidsPool.Get();
+			// Boids have to have different root objects for the IJobParallelForTransform
+			// to be properly parallelized properly with multiple threads
+			boid.SetParent(null, false);
+			boid.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
+
+			_boids[NumberOfAgents] = new BoidData(position, direction * speed);
+			_spawnedBoids[NumberOfAgents] = boid.transform;
+			_boidsGrid.Add(position, NumberOfAgents);
+			NumberOfAgents++;
 		}
 
 		private void Update()
@@ -100,6 +131,38 @@ namespace Flocks
 
 			_jobHandle = handle;
 		}
+
+		private void LateUpdate()
+		{
+			_jobHandle.Complete();
+			foreach (Object item in _behaviours)
+			{
+				IFlockBehaviour behaviour = (IFlockBehaviour) item;
+				behaviour.OnFlockUpdated(this);
+			}
+		}
+
+		public void Breed(int count, NativeArray<int2> indices)
+		{
+			count = Mathf.Min(count, _maxNumberOfAgents - NumberOfAgents);
+			if (count == 0) return;
+			
+			for (int i = 0; i < count; i++)
+			{
+				int2 index = indices[i];
+				BoidData first = _boids[index.x];
+				BoidData second = _boids[index.y];
+				Vector3 position = (first.Position + second.Position) / 2;
+				Vector3 velocity = (first.Velocity + second.Velocity) / 2;
+				float speed = velocity.magnitude;
+				Vector3 direction = velocity / speed;
+
+				SpawnBoid(position, direction, speed);
+			}
+			_transformAccessArray.SetTransforms(_spawnedBoids);
+		}
+
+		private void OnDestroy() => Dispose();
 
 		private JobHandle ScheduleBehaviours(IFlockBehaviour.ScheduleTiming timing, JobHandle dependency)
 		{
@@ -118,24 +181,12 @@ namespace Flocks
 			Profiler.BeginSample("Build boids spatial hash grid");
 #endif
 			_boidsGrid.Clear();
-			for (int i = 0; i < _numberOfAgents; i++) _boidsGrid.Add(_boids[i].Position, i);
+			for (int i = 0; i < NumberOfAgents; i++) _boidsGrid.Add(_boids[i].Position, i);
 			_lastGridRebuildTime = Time.time;
 #if ENABLE_PROFILER
 			Profiler.EndSample();
 #endif
 		}
-
-		private void LateUpdate()
-		{
-			_jobHandle.Complete();
-			foreach (Object item in _behaviours)
-			{
-				IFlockBehaviour behaviour = (IFlockBehaviour) item;
-				behaviour.OnFlockUpdated();
-			}
-		}
-
-		private void OnDestroy() => Dispose();
 
 		private void Dispose()
 		{
@@ -149,7 +200,7 @@ namespace Flocks
 			_flockSettings.Validate();
 		
 			if (!Application.isPlaying || Time.frameCount < 1) return;
-			if (_boids.Length == _numberOfAgents) return;
+			if (_boids.Length == _maxNumberOfAgents) return;
 			InitAgents();
 		}
 	}

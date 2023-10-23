@@ -1,9 +1,11 @@
-﻿using Unity.Collections;
+﻿using Unity.Burst;
+using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace Flocks.Jobs
 {
+	[BurstCompile]
 	public struct GravityJob : IJobParallelFor
 	{
 		private NativeArray<BoidData> _data;

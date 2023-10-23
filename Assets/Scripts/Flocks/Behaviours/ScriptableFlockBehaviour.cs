@@ -9,8 +9,7 @@ namespace Flocks.Behaviours
 		protected const string DataPath = "Data/Flock/"; 
 #endif
 
-		public virtual void OnBeforeFlockUpdate() { }
 		public abstract JobHandle Schedule(Flock flock, IFlockBehaviour.ScheduleTiming timing, JobHandle dependency = default);
-		public virtual void OnFlockUpdated() { }
+		public virtual void OnFlockUpdated(Flock flock) { }
 	}
 }

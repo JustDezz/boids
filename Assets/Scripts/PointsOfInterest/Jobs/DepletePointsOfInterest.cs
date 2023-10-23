@@ -9,6 +9,9 @@ namespace PointsOfInterest.Jobs
 	[BurstCompile]
 	public struct DepletePointsOfInterest : IJobFor
 	{
+		// For some reason Unity throws exception when trying to read from this array,
+		// as if it was used from multiple threads like in IJobParallelFor (even though
+		// this job is executed on single thread), so sticking this attribute solves the issue
 		[NativeDisableParallelForRestriction] private NativeArray<BoidData> _boids;
 		[ReadOnly] private SpatialHashGrid<int> _boidsGrid;
 		private NativeArray<PointOfInterestData> _pois;
