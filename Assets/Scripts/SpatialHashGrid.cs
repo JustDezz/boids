@@ -132,7 +132,7 @@ public struct SpatialHashGrid<T> : IDisposable where T : struct, IEquatable<T>
 		private bool IncrementIndex(int component)
 		{
 			_cellIndex[component]++;
-			if (_cellIndex[component] < _cells[component]) return false;
+			if (_cellIndex[component] <= _cells[component]) return false;
 			_cellIndex[component] = 0;
 			return true;
 		}
