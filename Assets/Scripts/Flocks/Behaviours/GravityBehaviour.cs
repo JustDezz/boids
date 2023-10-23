@@ -10,10 +10,11 @@ namespace Flocks.Behaviours
 	{
 		[SerializeField] private float3 _gravity;
 
-		public override JobHandle Schedule(Flock flock, JobHandle dependency = default)
+		public override JobHandle Schedule(Flock flock, IFlockBehaviour.ScheduleTiming timing, JobHandle dependency = default)
 		{
+			if (timing != IFlockBehaviour.ScheduleTiming.BeforePositionsUpdate) return dependency;
 			if (math.all(_gravity == float3.zero)) return dependency;
-			GravityJob job = new(flock.Velocities, _gravity, Time.deltaTime);
+			GravityJob job = new(flock.Boids, _gravity, Time.deltaTime);
 			return job.Schedule(flock.NumberOfAgents, 0, dependency);
 		}
 	}

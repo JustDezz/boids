@@ -24,10 +24,10 @@ namespace PointsOfInterest
 		[SerializeField] [Min(0.01f)] private Vector3 _cellSize = Vector3.one;
 		[SerializeField] [Min(0)] private float _gridRebuildDelay;
 		
-		private PointOfInterest[] _pois;
+		private PointOfInterest[] _spawnedPois;
 		private IPool<PointOfInterest> _poisPool;
 		
-		private NativeArray<PointOfInterestData> _data;
+		private NativeArray<PointOfInterestData> _pois;
 		private SpatialHashGrid<int> _poisGrid;
 		
 		private bool _requireGridRebuild;
@@ -36,7 +36,7 @@ namespace PointsOfInterest
 		private bool _isInitialized;
 		
 		public int NumberOfPoints { get; private set; }
-		public NativeArray<PointOfInterestData> Data => _data;
+		public NativeArray<PointOfInterestData> Pois => _pois;
 		public SpatialHashGrid<int> PoisGrid => _poisGrid;
 
 		private void Start() => Init();
@@ -48,13 +48,13 @@ namespace PointsOfInterest
 			if (_isInitialized)
 			{
 				Dispose();
-				foreach (PointOfInterest poi in _pois) _poisPool.Return(poi);
+				foreach (PointOfInterest poi in _spawnedPois) _poisPool.Return(poi);
 			}
 
 			if (_maxNumberOfPoints == 0) return;
-			_pois = new PointOfInterest[_maxNumberOfPoints];
+			_spawnedPois = new PointOfInterest[_maxNumberOfPoints];
 			_poisGrid = new SpatialHashGrid<int>(_world.HardBounds, _cellSize, _maxNumberOfPoints, Allocator.Persistent);
-			_data = new NativeArray<PointOfInterestData>(_maxNumberOfPoints, Allocator.Persistent);
+			_pois = new NativeArray<PointOfInterestData>(_maxNumberOfPoints, Allocator.Persistent);
 
 			SpawnBatch(_initialNumberOfPoints);
 
@@ -73,7 +73,7 @@ namespace PointsOfInterest
 		private void Dispose()
 		{
 			_poisGrid.Dispose();
-			_data.Dispose();
+			_pois.Dispose();
 		}
 
 		private void RebuildGrid()
@@ -82,9 +82,9 @@ namespace PointsOfInterest
 			Profiler.BeginSample("Build PoIs spatial hash grid");
 #endif
 			_poisGrid.Clear();
-			for (int i = 0; i < _pois.Length; i++)
+			for (int i = 0; i < _spawnedPois.Length; i++)
 			{
-				PointOfInterest poi = _pois[i];
+				PointOfInterest poi = _spawnedPois[i];
 				if (poi == null) continue;
 				Vector3 position = poi.transform.position;
 				_poisGrid.Add(position, i);
@@ -117,8 +117,8 @@ namespace PointsOfInterest
 				
 				poi.ResetUsages();
 				_poisGrid.Add(position, NumberOfPoints);
-				_pois[NumberOfPoints] = poi;
-				_data[NumberOfPoints] = new PointOfInterestData(position, poi.Usages);
+				_spawnedPois[NumberOfPoints] = poi;
+				_pois[NumberOfPoints] = new PointOfInterestData(position, poi.Usages);
 				NumberOfPoints++;
 			}
 
@@ -129,8 +129,8 @@ namespace PointsOfInterest
 		{
 			for (int i = 0; i < NumberOfPoints; i++)
 			{
-				PointOfInterest poi = _pois[i];
-				PointOfInterestData poiData = _data[i];
+				PointOfInterest poi = _spawnedPois[i];
+				PointOfInterestData poiData = _pois[i];
 				if (poi.Usages == poiData.Usages) continue;
 
 				if (poiData.Usages > 0)
@@ -141,10 +141,10 @@ namespace PointsOfInterest
 
 				_poisPool.Return(poi);
 				int lastIndex = NumberOfPoints - 1;
+				_spawnedPois[i] = _spawnedPois[lastIndex];
 				_pois[i] = _pois[lastIndex];
-				_data[i] = _data[lastIndex];
+				_spawnedPois[lastIndex] = default;
 				_pois[lastIndex] = default;
-				_data[lastIndex] = default;
 
 				_requireGridRebuild = true;
 				NumberOfPoints--;

@@ -10,7 +10,7 @@ namespace Flocks.Behaviours
 #endif
 
 		public virtual void OnBeforeFlockUpdate() { }
-		public abstract JobHandle Schedule(Flock flock, JobHandle dependency = default);
+		public abstract JobHandle Schedule(Flock flock, IFlockBehaviour.ScheduleTiming timing, JobHandle dependency = default);
 		public virtual void OnFlockUpdated() { }
 	}
 }

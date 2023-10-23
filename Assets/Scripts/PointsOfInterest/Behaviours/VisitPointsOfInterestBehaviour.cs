@@ -13,25 +13,38 @@ namespace PointsOfInterest.Behaviours
 		[SerializeField] private float2 _pointInfluence;
 		[SerializeField] [Min(0)] private float _pointConsumeRadius;
 		
-		private JobHandle _depleteHandle;
-
 		public void OnBeforeFlockUpdate() { }
 
-		public JobHandle Schedule(Flock flock, JobHandle dependency = default)
+		public JobHandle Schedule(Flock flock, IFlockBehaviour.ScheduleTiming timing, JobHandle dependency = default)
+		{
+			dependency = timing switch
+			{
+				IFlockBehaviour.ScheduleTiming.BeforePositionsUpdate => ScheduleVisitJob(flock, dependency),
+				IFlockBehaviour.ScheduleTiming.AfterPositionsUpdate => ScheduleDepleteJob(flock, dependency),
+				_ => dependency
+			};
+
+			return dependency;
+		}
+
+		private JobHandle ScheduleVisitJob(Flock flock, JobHandle dependency)
 		{
 			if (math.all(_pointInfluence == float2.zero)) return dependency;
 			
 			VisitPointsOfInterestJob visitJob = new(
-				flock.Positions, flock.Velocities, flock.FlockSettings,
-				_controller.Data, _controller.PoisGrid,
+				flock.Boids, flock.FlockSettings,
+				_controller.Pois, _controller.PoisGrid,
 				_pointInfluence, Time.deltaTime);
 
-			JobHandle jobHandle = visitJob.Schedule(flock.NumberOfAgents, 0, dependency);
+			return visitJob.Schedule(flock.NumberOfAgents, 0, dependency);
+		}
 
-			DepletePointsOfInterest depleteJob = new(flock.Positions, flock.BoidsGrid, _controller.Data, _pointConsumeRadius);
-			_depleteHandle = depleteJob.Schedule(_controller.NumberOfPoints, 0, jobHandle);
-
-			return _depleteHandle;
+		private JobHandle ScheduleDepleteJob(Flock flock, JobHandle dependency)
+		{
+			if (_pointConsumeRadius == 0) return dependency;
+			
+			DepletePointsOfInterest depleteJob = new(flock.Boids, flock.BoidsGrid, _controller.Pois, _pointConsumeRadius);
+			return depleteJob.Schedule(_controller.NumberOfPoints, dependency);
 		}
 
 		public void OnFlockUpdated() => _controller.UpdateUsages();

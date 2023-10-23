@@ -6,15 +6,20 @@ namespace Flocks.Jobs
 {
 	public struct GravityJob : IJobParallelFor
 	{
-		private NativeArray<float3> _velocities;
+		private NativeArray<BoidData> _data;
 		[ReadOnly] private readonly float3 _deltaGravity;
 
-		public GravityJob(NativeArray<float3> velocities, float3 gravity, float deltaTime)
+		public GravityJob(NativeArray<BoidData> data, float3 gravity, float deltaTime)
 		{
-			_velocities = velocities;
+			_data = data;
 			_deltaGravity = gravity * deltaTime;
 		}
 		
-		public void Execute(int index) => _velocities[index] += _deltaGravity;
+		public void Execute(int index)
+		{
+			BoidData data = _data[index];
+			data.Velocity += _deltaGravity;
+			_data[index] = data;
+		}
 	}
 }

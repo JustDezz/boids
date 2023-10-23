@@ -9,13 +9,13 @@ namespace Flocks.Jobs
 	[BurstCompile]
 	public struct BoidsJob : IJobParallelFor
 	{
-		[ReadOnly] private readonly NativeArray<float3> _positions;
-		
 		// As the boids are independent from one another in their nature, 
 		// the race conditions doesn't affect anything, thus disabling 
 		// parallel for restriction allows us to gain extra performance
 		// by using IJobParallelFor instead of IJobFor
-		[NativeDisableParallelForRestriction] private NativeArray<float3> _velocities;
+		[NativeDisableParallelForRestriction] private NativeArray<BoidData> _data;
+		
+		[ReadOnly] private SpatialHashGrid<int> _boidsGrid;
 	
 		[ReadOnly] private readonly float _fov;
 		[ReadOnly] private readonly float _radius;
@@ -29,18 +29,14 @@ namespace Flocks.Jobs
 		[ReadOnly] private readonly float _avoidanceFactor;
 		[ReadOnly] private readonly float _alignmentFactor;
 		[ReadOnly] private readonly float _cohesionFactor;
-		
-		[ReadOnly] private SpatialHashGrid<int> _boidsGrid;
 
 		public BoidsJob(
-			NativeArray<float3> positions, NativeArray<float3> velocities,
-			SpatialHashGrid<int> boidsGrid,
+			NativeArray<BoidData> data, SpatialHashGrid<int> boidsGrid,
 			FlockSettings flockSettings, Bounds bounds, float deltaTime,
 			float avoidanceFactor, float alignmentFactor, float cohesionFactor)
 		{
+			_data = data;
 			_boidsGrid = boidsGrid;
-			_velocities = velocities;
-			_positions = positions;
 		
 			_fov = flockSettings.FOV;
 			_radius = flockSettings.InfluenceRadius;
@@ -58,8 +54,9 @@ namespace Flocks.Jobs
 
 		public void Execute(int index)
 		{
-			float3 position = _positions[index];
-			float3 velocity = _velocities[index];
+			BoidData data = _data[index];
+			float3 position = data.Position;
+			float3 velocity = data.Velocity;
 			float3 direction = math.normalize(velocity);
 
 			float sqrRadius = _radius * _radius;
@@ -77,7 +74,8 @@ namespace Flocks.Jobs
 				int i = enumerator.Current;
 				if (i == index) continue;
 
-				float3 otherPosition = _positions[i];
+				BoidData otherData = _data[i];
+				float3 otherPosition = otherData.Position;
 				float3 offset = otherPosition - position;
 				float sqrDistance = math.lengthsq(offset);
 				if (sqrDistance > sqrRadius || sqrDistance == 0) continue;
@@ -94,7 +92,7 @@ namespace Flocks.Jobs
 				}
 
 				consideredNeighbours++;
-				alignmentVector += _velocities[i];
+				alignmentVector += otherData.Velocity;
 				centerOfMass += otherPosition;
 			}
 
@@ -117,7 +115,9 @@ namespace Flocks.Jobs
 
 			float speed = math.length(velocity);
 			float clampedSpeed = math.clamp(speed, _speed.x, _speed.y);
-			_velocities[index] = velocity / speed * clampedSpeed;
+			
+			data.Velocity = velocity / speed * clampedSpeed;
+			_data[index] = data;
 		}
 	}
 }

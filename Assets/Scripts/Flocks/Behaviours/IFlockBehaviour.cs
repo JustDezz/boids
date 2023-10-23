@@ -4,8 +4,13 @@ namespace Flocks.Behaviours
 {
 	public interface IFlockBehaviour
 	{
-		public void OnBeforeFlockUpdate();
-		public JobHandle Schedule(Flock flock, JobHandle dependency = default);
+		public JobHandle Schedule(Flock flock, ScheduleTiming timing, JobHandle dependency = default);
 		public void OnFlockUpdated();
+		
+		public enum ScheduleTiming
+		{
+			BeforePositionsUpdate,
+			AfterPositionsUpdate
+		}
 	}
 }

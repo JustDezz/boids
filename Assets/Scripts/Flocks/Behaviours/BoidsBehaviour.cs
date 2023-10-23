@@ -1,7 +1,5 @@
 ﻿using Flocks.Jobs;
-using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace Flocks.Behaviours
@@ -13,15 +11,15 @@ namespace Flocks.Behaviours
 		[SerializeField] [Range(0, 1)] private float _alignmentFactor;
 		[SerializeField] [Range(0, 1)] private float _cohesionFactor;
 		
-		public override JobHandle Schedule(Flock flock, JobHandle dependency = default)
+		public override JobHandle Schedule(Flock flock, IFlockBehaviour.ScheduleTiming timing, JobHandle dependency = default)
 		{
-			NativeArray<float3> positions = flock.Positions;
-			NativeArray<float3> velocities = flock.Velocities;
+			if (timing != IFlockBehaviour.ScheduleTiming.BeforePositionsUpdate) return dependency;
+			
 			SpatialHashGrid<int> grid = flock.BoidsGrid;
 			FlockSettings settings = flock.FlockSettings;
 			Bounds softBounds = flock.SoftBounds;
 			BoidsJob job = new(
-				positions, velocities, grid,
+				flock.Boids, grid,
 				settings, softBounds, Time.deltaTime, 
 				_avoidanceFactor, _alignmentFactor, _cohesionFactor);
 			

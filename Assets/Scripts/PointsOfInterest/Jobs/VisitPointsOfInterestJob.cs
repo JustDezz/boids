@@ -9,36 +9,34 @@ namespace PointsOfInterest.Jobs
 	[BurstCompile]
 	public struct VisitPointsOfInterestJob : IJobParallelFor
 	{
-		[ReadOnly] private readonly NativeArray<float3> _boidsPositions;
+		private NativeArray<BoidData> _boids;
 		
-		private NativeArray<float3> _boidsVelocities;
-		
-		[ReadOnly] private readonly float _poiRadius;
 		[ReadOnly] private readonly NativeArray<PointOfInterestData> _pois;
-		[ReadOnly] private readonly float2 _poiInfluence;
-		[ReadOnly] private readonly float _deltaTime;
-		
 		[ReadOnly] private SpatialHashGrid<int> _poisGrid;
 
+		[ReadOnly] private readonly float _poiRadius;
+		[ReadOnly] private readonly float2 _poiInfluence;
+		[ReadOnly] private readonly float _deltaTime;
+
 		public VisitPointsOfInterestJob(
-			NativeArray<float3> boidsPositions, NativeArray<float3> boidsVelocities, FlockSettings flockSettings,
+			NativeArray<BoidData> boids, FlockSettings flockSettings,
 			NativeArray<PointOfInterestData> pois, SpatialHashGrid<int> poisGrid,
 			float2 poiInfluence, float deltaTime)
 		{
-			_deltaTime = deltaTime;
-			_poiInfluence = poiInfluence;
+			_boids = boids;
 			_pois = pois;
 			_poisGrid = poisGrid;
-			_boidsVelocities = boidsVelocities;
-			_boidsPositions = boidsPositions;
-
+			
 			_poiRadius = flockSettings.PoIRadius;
+			_poiInfluence = poiInfluence;
+			_deltaTime = deltaTime;
 		}
 		
 		public void Execute(int index)
 		{
-			float3 position = _boidsPositions[index];
-			float3 velocity = _boidsVelocities[index];
+			BoidData boid = _boids[index];
+			float3 position = boid.Position;
+			float3 velocity = boid.Velocity;
 			
 			float speed = math.length(velocity);
 			float3 direction = velocity / speed;
@@ -63,7 +61,8 @@ namespace PointsOfInterest.Jobs
 				direction = math.normalize(direction);
 			}
 
-			_boidsVelocities[index] = direction * speed;
+			boid.Velocity = direction * speed;
+			_boids[index] = boid;
 		}
 	}
 }

@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Boids Behaviour
   m_EditorClassIdentifier: 
   _avoidanceFactor: 0.2
-  _alignmentFactor: 0.05
-  _cohesionFactor: 0.075
+  _alignmentFactor: 0.02
+  _cohesionFactor: 0.01

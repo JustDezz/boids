@@ -163,7 +163,7 @@ MonoBehaviour:
       y: 4
     _turnSpeed: 8
     _influenceRadius: 2
-    _avoidRadius: 0.2
+    _avoidRadius: 0.3
     _poiRadius: 5
   _numberOfAgents: 500
   _density: 0.01
@@ -522,7 +522,7 @@ MonoBehaviour:
   _pointInfluence:
     x: 0
     y: 1
-  _pointConsumeRadius: 0.2
+  _pointConsumeRadius: 0.5
 --- !u!114 &1949152731
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -543,5 +543,5 @@ MonoBehaviour:
   _initialNumberOfPoints: 5
   _spawnBatchSize: {x: 1, y: 2}
   _respawnTime: {x: 1, y: 5}
-  _cellSize: {x: 5, y: 5, z: 5}
+  _cellSize: {x: 10, y: 10, z: 10}
   _gridRebuildDelay: 1

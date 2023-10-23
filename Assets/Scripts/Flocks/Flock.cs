@@ -33,10 +33,9 @@ namespace Flocks
 		[SerializeField] [Min(0)] private float _gridRebuildDelay;
 
 		private IPool<Transform> _boidsPool;
-		private Transform[] _boids;
+		private Transform[] _spawnedBoids;
 		
-		private NativeArray<float3> _positions;
-		private NativeArray<float3> _velocities;
+		private NativeArray<BoidData> _boids;
 		private SpatialHashGrid<int> _boidsGrid;
 		private TransformAccessArray _transformAccessArray;
 
@@ -45,8 +44,7 @@ namespace Flocks
 
 		public int NumberOfAgents => _numberOfAgents;
 		public FlockSettings FlockSettings => _flockSettings;
-		public NativeArray<float3> Positions => _positions;
-		public NativeArray<float3> Velocities => _velocities;
+		public NativeArray<BoidData> Boids => _boids;
 		public SpatialHashGrid<int> BoidsGrid => _boidsGrid;
 		
 		public Bounds SoftBounds => _world.SoftBounds;
@@ -56,18 +54,17 @@ namespace Flocks
 
 		private void InitAgents()
 		{
-			if (_boids != null)
+			if (_spawnedBoids != null)
 			{
 				Dispose();
-				foreach (Transform t in _boids) _boidsPool.Return(t);
+				foreach (Transform t in _spawnedBoids) _boidsPool.Return(t);
 			}
 
 			_boidsPool ??= new MultiUnityPool<Transform>(_boidsPrefabs.Select(p => p.transform));
 
 			_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _numberOfAgents, Allocator.Persistent);
-			_positions = new NativeArray<float3>(_numberOfAgents, Allocator.Persistent);
-			_velocities = new NativeArray<float3>(_numberOfAgents, Allocator.Persistent);
-			_boids = new Transform[_numberOfAgents];
+			_boids = new NativeArray<BoidData>(_numberOfAgents, Allocator.Persistent);
+			_spawnedBoids = new Transform[_numberOfAgents];
 		
 			float spawnRadius = _numberOfAgents * _density;
 			float2 speed = _flockSettings.Speed;
@@ -83,32 +80,36 @@ namespace Flocks
 				boid.SetParent(null, false);
 				boid.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
 
-				_positions[i] = position;
-				_velocities[i] = velocity;
-				_boids[i] = boid.transform;
+				_boids[i] = new BoidData(position, velocity);
+				_spawnedBoids[i] = boid.transform;
 				_boidsGrid.Add(position, i);
 			}
 
-			_transformAccessArray = new TransformAccessArray(_boids);
+			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
 			_lastGridRebuildTime = Time.time;
 		}
 
 		private void Update()
 		{
-			if (_lastGridRebuildTime + _gridRebuildDelay < Time.time) RebuildHashGrid();
+			if (_lastGridRebuildTime + _gridRebuildDelay <= Time.time) RebuildHashGrid();
 
-			JobHandle handle = default;
+			ApplyTransformsJob transformsJob = new(_boids, HardBounds, Time.deltaTime);
+			JobHandle handle = ScheduleBehaviours(IFlockBehaviour.ScheduleTiming.BeforePositionsUpdate, default);
+			handle = transformsJob.Schedule(_transformAccessArray, handle);
+			handle = ScheduleBehaviours(IFlockBehaviour.ScheduleTiming.AfterPositionsUpdate, handle);
+
+			_jobHandle = handle;
+		}
+
+		private JobHandle ScheduleBehaviours(IFlockBehaviour.ScheduleTiming timing, JobHandle dependency)
+		{
 			foreach (Object item in _behaviours)
 			{
 				IFlockBehaviour behaviour = (IFlockBehaviour) item;
-				handle = behaviour.Schedule(this, handle);
-				behaviour.OnBeforeFlockUpdate();
+				dependency = behaviour.Schedule(this, timing, dependency);
 			}
-
-			ApplyTransformsJob transformsJob = new(_positions, _velocities, HardBounds, Time.deltaTime);
-			handle = transformsJob.Schedule(_transformAccessArray, handle);
-
-			_jobHandle = handle;
+			
+			return dependency;
 		}
 
 		private void RebuildHashGrid()
@@ -117,7 +118,7 @@ namespace Flocks
 			Profiler.BeginSample("Build boids spatial hash grid");
 #endif
 			_boidsGrid.Clear();
-			for (int i = 0; i < _positions.Length; i++) _boidsGrid.Add(_positions[i], i);
+			for (int i = 0; i < _numberOfAgents; i++) _boidsGrid.Add(_boids[i].Position, i);
 			_lastGridRebuildTime = Time.time;
 #if ENABLE_PROFILER
 			Profiler.EndSample();
@@ -138,8 +139,7 @@ namespace Flocks
 
 		private void Dispose()
 		{
-			_positions.Dispose();
-			_velocities.Dispose();
+			_boids.Dispose();
 			_boidsGrid.Dispose();
 			_transformAccessArray.Dispose();
 		}
