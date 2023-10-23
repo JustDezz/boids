@@ -165,14 +165,14 @@ MonoBehaviour:
     _influenceRadius: 2
     _avoidRadius: 0.2
     _poiRadius: 5
-  _numberOfAgents: 10000
+  _numberOfAgents: 500
   _density: 0.01
   _behaviours:
   - {fileID: 11400000, guid: c4217484bc6d83a4fbc9a710c9e8a59f, type: 2}
   - {fileID: 11400000, guid: a04e60e6e77867c4bae65d4e9a9ad90e, type: 2}
   - {fileID: 1949152730}
   _cellSize: {x: 4, y: 4, z: 4}
-  _gridRebuildDelay: 0.1
+  _gridRebuildDelay: 0
 --- !u!4 &233273978
 Transform:
   m_ObjectHideFlags: 0
@@ -452,10 +452,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _softBounds:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 30, y: 30, z: 30}
+    m_Extent: {x: 5, y: 5, z: 5}
   _hardBounds:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 40, y: 40, z: 40}
+    m_Extent: {x: 10, y: 10, z: 10}
 --- !u!4 &801747284
 Transform:
   m_ObjectHideFlags: 0
@@ -522,6 +522,7 @@ MonoBehaviour:
   _pointInfluence:
     x: 0
     y: 1
+  _pointConsumeRadius: 0.2
 --- !u!114 &1949152731
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -538,9 +539,9 @@ MonoBehaviour:
   _prefabs:
   - {fileID: 2831456331822314164, guid: 93c526b81669a844b9fe798647d2137d, type: 3}
   - {fileID: 2831456331822314164, guid: 7a3021d1de2147947a7cc3a65eda68d7, type: 3}
-  _maxNumberOfPoints: 100
-  _initialNumberOfPoints: 10
-  _spawnBatchSize: {x: 3, y: 10}
+  _maxNumberOfPoints: 10
+  _initialNumberOfPoints: 5
+  _spawnBatchSize: {x: 1, y: 2}
   _respawnTime: {x: 1, y: 5}
   _cellSize: {x: 5, y: 5, z: 5}
   _gridRebuildDelay: 1

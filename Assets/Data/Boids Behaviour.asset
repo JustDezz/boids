@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73a9c526a0584e21bf51a07c89d49428, type: 3}
   m_Name: Boids Behaviour
   m_EditorClassIdentifier: 
-  _avoidanceFactor: 1
-  _alignmentFactor: 0.3
-  _cohesionFactor: 0.2
+  _avoidanceFactor: 0.2
+  _alignmentFactor: 0.05
+  _cohesionFactor: 0.075

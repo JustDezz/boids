@@ -78,7 +78,9 @@ namespace Flocks
 				Vector3 velocity = direction * Random.Range(speed.x, speed.y);
 
 				Transform boid = _boidsPool.Get();
-				boid.SetParent(transform, false);
+				// Boids have to have different root objects to be properly parallelized 
+				// on multiple cores in IJobParallelForTransform
+				boid.SetParent(null, false);
 				boid.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
 
 				_positions[i] = position;
@@ -100,6 +102,7 @@ namespace Flocks
 			{
 				IFlockBehaviour behaviour = (IFlockBehaviour) item;
 				handle = behaviour.Schedule(this, handle);
+				behaviour.OnBeforeFlockUpdate();
 			}
 
 			ApplyTransformsJob transformsJob = new(_positions, _velocities, HardBounds, Time.deltaTime);
@@ -121,7 +124,15 @@ namespace Flocks
 #endif
 		}
 
-		private void LateUpdate() => _jobHandle.Complete();
+		private void LateUpdate()
+		{
+			_jobHandle.Complete();
+			foreach (Object item in _behaviours)
+			{
+				IFlockBehaviour behaviour = (IFlockBehaviour) item;
+				behaviour.OnFlockUpdated();
+			}
+		}
 
 		private void OnDestroy() => Dispose();
 

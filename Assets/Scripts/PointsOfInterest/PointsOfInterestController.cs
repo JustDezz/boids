@@ -29,6 +29,8 @@ namespace PointsOfInterest
 		
 		private NativeArray<PointOfInterestData> _data;
 		private SpatialHashGrid<int> _poisGrid;
+		
+		private bool _requireGridRebuild;
 		private float _lastGridRebuild;
 		private float _nextSpawn;
 		private bool _isInitialized;
@@ -62,14 +64,8 @@ namespace PointsOfInterest
 		private void Update()
 		{
 			float time = Time.time;
-			bool gridRebuildRequired = _lastGridRebuild + _gridRebuildDelay <= time;
-			if (_nextSpawn >= time)
-			{
-				SpawnBatch(_spawnBatchSize.GetRandom(true));
-				gridRebuildRequired = true;
-			}
-			
-			if (gridRebuildRequired) RebuildGrid();
+			if (_nextSpawn <= time) SpawnBatch(_spawnBatchSize.GetRandom(true));
+			if (_lastGridRebuild + _gridRebuildDelay <= time || _requireGridRebuild) RebuildGrid();
 		}
 
 		private void OnDestroy() => Dispose();
@@ -94,6 +90,7 @@ namespace PointsOfInterest
 				_poisGrid.Add(position, i);
 			}
 			_lastGridRebuild = Time.time;
+			_requireGridRebuild = false;
 #if ENABLE_PROFILER
 			Profiler.EndSample();
 #endif
@@ -101,10 +98,13 @@ namespace PointsOfInterest
 
 		private void SpawnBatch(int batchSize)
 		{
+			_nextSpawn = Time.time + _respawnTime.GetRandom();
+			batchSize = Mathf.Min(batchSize, _maxNumberOfPoints - NumberOfPoints);
+			if (batchSize == 0) return;
+			
 			Bounds bounds = _world.SoftBounds;
 			float3 min = bounds.min;
 			float3 max = bounds.max;
-			batchSize = Mathf.Min(batchSize, _maxNumberOfPoints - NumberOfPoints);
 			for (int i = 0; i < batchSize; i++)
 			{
 				float3 normalizedPosition = new(Random.value, Random.value, Random.value);
@@ -122,12 +122,36 @@ namespace PointsOfInterest
 				NumberOfPoints++;
 			}
 
-			_nextSpawn = Time.time + _respawnTime.GetRandom();
+			_requireGridRebuild = true;
 		}
 
-		private void OnValidate()
+		public void UpdateUsages()
 		{
-			_initialNumberOfPoints = Mathf.Min(_initialNumberOfPoints, _maxNumberOfPoints);
+			for (int i = 0; i < NumberOfPoints; i++)
+			{
+				PointOfInterest poi = _pois[i];
+				PointOfInterestData poiData = _data[i];
+				if (poi.Usages == poiData.Usages) continue;
+
+				if (poiData.Usages > 0)
+				{
+					poi.Usages = poiData.Usages;
+					continue;
+				}
+
+				_poisPool.Return(poi);
+				int lastIndex = NumberOfPoints - 1;
+				_pois[i] = _pois[lastIndex];
+				_data[i] = _data[lastIndex];
+				_pois[lastIndex] = default;
+				_data[lastIndex] = default;
+
+				_requireGridRebuild = true;
+				NumberOfPoints--;
+				i--;
+			}
 		}
+
+		private void OnValidate() => _initialNumberOfPoints = Mathf.Min(_initialNumberOfPoints, _maxNumberOfPoints);
 	}
 }

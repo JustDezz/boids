@@ -4,7 +4,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
-namespace PointsOfInterest
+namespace PointsOfInterest.Jobs
 {
 	[BurstCompile]
 	public struct VisitPointsOfInterestJob : IJobParallelFor

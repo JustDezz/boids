@@ -8,7 +8,9 @@ namespace Flocks.Behaviours
 #if UNITY_EDITOR
 		protected const string DataPath = "Data/Flock/"; 
 #endif
-		
+
+		public virtual void OnBeforeFlockUpdate() { }
 		public abstract JobHandle Schedule(Flock flock, JobHandle dependency = default);
+		public virtual void OnFlockUpdated() { }
 	}
 }
