@@ -16,6 +16,8 @@ namespace Flocks.Behaviours
 		private float AvoidanceFactor { get; set; }
 		private float AlignmentFactor { get; set; }
 		private float CohesionFactor { get; set; }
+		private float AvoidanceRadius { get; set; }
+		private Vector2 Speed { get; set; }
 
 		public override JobHandle Schedule(Flock flock, IFlockBehaviour.ScheduleTiming timing, JobHandle dependency = default)
 		{
@@ -23,6 +25,8 @@ namespace Flocks.Behaviours
 			
 			SpatialHashGrid<int> grid = flock.BoidsGrid;
 			FlockSettings settings = flock.FlockSettings;
+			settings.Speed = Speed;
+			settings.AvoidRadius = AvoidanceRadius;
 			Bounds softBounds = flock.SoftBounds;
 			BoidsJob job = new(
 				flock.Boids, grid,
@@ -32,13 +36,22 @@ namespace Flocks.Behaviours
 			return job.Schedule(flock.NumberOfAgents, 0, dependency);
 		}
 
-		public void CreateUI(FlockSettingsUI ui)
+		public void CreateUI(Flock flock, FlockUI ui)
 		{
 			FlockSettingsGroup group = ui.AddGroup();
 			group.SetName("General");
-			AddSlider(group, "Avoidance", _avoidanceFactor).ValueChanged += v => AvoidanceFactor = v;
-			AddSlider(group, "Alignment", _alignmentFactor).ValueChanged += v => AlignmentFactor = v;
-			AddSlider(group, "Cohesion", _cohesionFactor).ValueChanged += v => CohesionFactor = v;
+			group.AddSlider("Avoidance", 0, 1, _avoidanceFactor).ValueChanged += v => AvoidanceFactor = v;
+			group.AddSlider("Alignment", 0, 1, _alignmentFactor).ValueChanged += v => AlignmentFactor = v;
+			group.AddSlider("Cohesion", 0, 1, _cohesionFactor).ValueChanged += v => CohesionFactor = v;
+			
+			FlockSettings settings = flock.FlockSettings;
+			AvoidanceRadius = settings.AvoidRadius;
+			Speed = settings.Speed;
+			
+			Vector4 speed = settings.Speed.xyxy;
+			VectorField vectorField = group.AddVectorField("Speed limits", 2, speed);
+			vectorField.ValueChanged += v => Speed = new Vector2(v.x, v.y);
+			group.AddSlider("Avoidance Radius", 0, 0.5f, AvoidanceRadius).ValueChanged += v => AvoidanceRadius = v;
 		}
 
 		private void OnEnable() => WriteDefaults();
@@ -49,14 +62,6 @@ namespace Flocks.Behaviours
 			AvoidanceFactor = _avoidanceFactor;
 			AlignmentFactor = _alignmentFactor;
 			CohesionFactor = _cohesionFactor;
-		}
-
-		private static SliderWithInputField AddSlider(FlockSettingsGroup group, string label, float value)
-		{
-			SliderWithInputField slider = group.AddSlider();
-			slider.SetLabel(label);
-			slider.SetValues(0, 1, value);
-			return slider;
 		}
 	}
 }

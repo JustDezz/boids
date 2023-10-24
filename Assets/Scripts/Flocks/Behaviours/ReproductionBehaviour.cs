@@ -57,7 +57,7 @@ namespace Flocks.Behaviours
 			_breadedEntities.Dispose();
 		}
 
-		public void CreateUI(FlockSettingsUI ui)
+		public void CreateUI(Flock flock, FlockUI ui)
 		{
 			FlockSettingsGroup group = ui.AddGroup();
 			group.SetName("Reproduction");

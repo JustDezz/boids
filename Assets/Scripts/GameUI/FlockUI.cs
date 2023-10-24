@@ -1,17 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace GameUI
 {
-	public class FlockSettingsUI : MonoBehaviour
+	public class FlockUI : MonoBehaviour
 	{
+		[SerializeField] private TMP_Text _boidsCount;
+		[SerializeField] private TMP_Text _fps;
 		[SerializeField] private RectTransform _parent;
 		[SerializeField] private FlockSettingsGroup _groupPrefab;
 
 		private List<FlockSettingsGroup> _groups;
 		
-		public static FlockSettingsUI Instance { get; private set; }
+		public static FlockUI Instance { get; private set; }
 
 		private void Awake() => Instance = this;
 
@@ -21,6 +23,12 @@ namespace GameUI
 			FlockSettingsGroup group = Instantiate(_groupPrefab, _parent);
 			_groups.Add(group);
 			return group;
+		}
+
+		public void UpdateBoidsCount(int count)
+		{
+			_boidsCount.text = $"Boids: {count}";
+			_fps.text = $"FPS {1 / Time.deltaTime: #00.0}";
 		}
 
 		public void Clear()

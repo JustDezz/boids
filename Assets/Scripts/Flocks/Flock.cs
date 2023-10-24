@@ -92,11 +92,11 @@ namespace Flocks
 
 		private void CreateUI()
 		{
-			FlockSettingsUI.Instance.Clear();
+			FlockUI.Instance.Clear();
 			foreach (Object behaviour in _behaviours)
 			{
 				if (behaviour is IAdjustableBehaviour adjustableBehaviour)
-					adjustableBehaviour.CreateUI(FlockSettingsUI.Instance);
+					adjustableBehaviour.CreateUI(this, FlockUI.Instance);
 			}
 		}
 
@@ -146,6 +146,8 @@ namespace Flocks
 			handle = ScheduleBehaviours(IFlockBehaviour.ScheduleTiming.AfterPositionsUpdate, handle);
 
 			_jobHandle = handle;
+
+			FlockUI.Instance.UpdateBoidsCount(NumberOfAgents);
 		}
 		private void LateUpdate()
 		{

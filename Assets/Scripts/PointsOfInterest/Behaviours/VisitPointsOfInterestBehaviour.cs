@@ -1,4 +1,5 @@
-﻿using Flocks;
+﻿using Cysharp.Threading.Tasks;
+using Flocks;
 using Flocks.Behaviours;
 using GameUI;
 using GameUI.Elements;
@@ -34,24 +35,24 @@ namespace PointsOfInterest.Behaviours
 		}
 
 		public void OnFlockUpdated(Flock flock) => _controller.UpdateUsages();
-		public void CreateUI(FlockSettingsUI ui)
+		public void CreateUI(Flock flock, FlockUI ui)
 		{
 			FlockSettingsGroup group = ui.AddGroup();
 			group.SetName("Points of interest");
-			SliderWithInputField slider = group.AddSlider();
-			slider.SetLabel("Food consume size");
-			slider.SetValues(0.1f, 1f, PointConsumeRadius);
+			SliderWithInputField slider = group.AddSlider("Consummation radius", 0.1f, 1f, PointConsumeRadius);
 			slider.ValueChanged += v => PointConsumeRadius = v;
 
-			VectorField vector = group.AddVectorField();
-			vector.Components = 2;
-			vector.SetLabel("Point influence by distance");
-			vector.SetValue(_pointInfluence.xyxy);
+			VectorField vector = group.AddVectorField("Point influence by distance", 2, _pointInfluence.xyxy);
 			vector.ValueChanged += v => PointInfluence = new float2(v.x, v.y);
 
-			CustomButton button = group.AddButton();
-			button.SetText($"Add {_spawnFoodByButton} food");
-			button.OnClick.AddListener(() => _controller.SpawnPoIs(_spawnFoodByButton));
+			CustomButton button = group.AddButton($"Add {_spawnFoodByButton} food");
+			button.OnClick.AddListener(() => SpawnPoIsDelayed().Forget());
+		}
+
+		private async UniTaskVoid SpawnPoIsDelayed()
+		{
+			await UniTask.Yield(PlayerLoopTiming.PostLateUpdate, cancellationToken: this.GetCancellationTokenOnDestroy());
+			_controller.SpawnPoIs(_spawnFoodByButton);
 		}
 
 		private void OnEnable() => WriteDefaults();

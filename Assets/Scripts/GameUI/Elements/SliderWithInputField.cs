@@ -23,12 +23,13 @@ namespace GameUI.Elements
 		private void Awake()
 		{
 			_slider.onValueChanged.AddListener(OnSliderValueChanged);
-			_inputField.onValueChanged.AddListener(OnInputChanged);
+			_inputField.characterValidation = TMP_InputField.CharacterValidation.Decimal;
+			_inputField.onSubmit.AddListener(OnSubmit);
 		}
 
 		public void SetLabel(string label) => _label.text = label;
 
-		private void OnInputChanged(string text)
+		private void OnSubmit(string text)
 		{
 			if (float.TryParse(text, out float value))
 			{

@@ -26,7 +26,7 @@ namespace Flocks.Behaviours
 		private void OnEnable() => Gravity = _gravity;
 		private void OnValidate() => Gravity = _gravity;
 
-		public void CreateUI(FlockSettingsUI ui)
+		public void CreateUI(Flock flock, FlockUI ui)
 		{
 			FlockSettingsGroup group = ui.AddGroup();
 			group.SetName("Gravity");

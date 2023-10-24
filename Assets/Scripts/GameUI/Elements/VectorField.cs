@@ -32,11 +32,12 @@ namespace GameUI.Elements
 			for (int i = 0; i < 4; i++)
 			{
 				TMP_InputField inputField = _inputFields[i];
-				inputField.onValueChanged.AddListener(OnInputChanged);
+				inputField.characterValidation = TMP_InputField.CharacterValidation.Decimal;
+				inputField.onSubmit.AddListener(OnSubmit);
 			}
 		}
 
-		private void OnInputChanged(string _)
+		private void OnSubmit(string _)
 		{
 			bool changed = false;
 			for (int i = 0; i < 4; i++)

@@ -18,11 +18,21 @@ namespace Flocks
 		
 		public float FOV => _fov;
 
-		public float2 Speed => _speed;
+		public float2 Speed
+		{
+			get => _speed;
+			set => _speed = value;
+		}
+
 		public float TurnSpeed => _turnSpeed;
 		
 		public float InfluenceRadius => _influenceRadius;
-		public float AvoidRadius => _avoidRadius;
+		public float AvoidRadius
+		{
+			get => _avoidRadius;
+			set => _avoidRadius = value;
+		}
+
 		public float PoIRadius => _poiRadius;
 
 		public void Validate() => _avoidRadius = Mathf.Clamp(_avoidRadius, 0, _influenceRadius);

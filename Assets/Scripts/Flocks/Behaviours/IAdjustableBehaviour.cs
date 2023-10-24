@@ -4,6 +4,6 @@ namespace Flocks.Behaviours
 {
 	public interface IAdjustableBehaviour
 	{
-		public void CreateUI(FlockSettingsUI ui);
+		public void CreateUI(Flock flock, FlockUI ui);
 	}
 }
