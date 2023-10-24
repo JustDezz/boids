@@ -30,15 +30,6 @@ namespace PlayerInput
             ""id"": ""1db67f8f-8a13-4b50-893d-7729d4d113f2"",
             ""actions"": [
                 {
-                    ""name"": ""Rotate"",
-                    ""type"": ""Value"",
-                    ""id"": ""79176224-c1a5-4ff2-9180-bfa605854790"",
-                    ""expectedControlType"": ""Vector2"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": true
-                },
-                {
                     ""name"": ""Zoom"",
                     ""type"": ""PassThrough"",
                     ""id"": ""05225239-5b93-4b78-95a2-4b4d87ce1981"",
@@ -46,49 +37,9 @@ namespace PlayerInput
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""Touch1"",
-                    ""type"": ""PassThrough"",
-                    ""id"": ""36095074-9cb7-475a-8421-d393bf7aa27c"",
-                    ""expectedControlType"": ""Vector2"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""Touch2"",
-                    ""type"": ""PassThrough"",
-                    ""id"": ""23e87edf-8dbf-4ef2-ae33-abf8390eb7d9"",
-                    ""expectedControlType"": ""Vector2"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
-                {
-                    ""name"": """",
-                    ""id"": ""d9fb5246-126b-428c-9c9a-0f8807568c78"",
-                    ""path"": ""<Mouse>/delta"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Rotate"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""9c6039df-50c0-422f-8d8d-08073868634c"",
-                    ""path"": ""<Touchscreen>/delta"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Rotate"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
                 {
                     ""name"": """",
                     ""id"": ""658543b1-3d38-41a7-a266-712dfab93f54"",
@@ -102,23 +53,12 @@ namespace PlayerInput
                 },
                 {
                     ""name"": """",
-                    ""id"": ""112e0e42-9d5b-4741-aadd-130e3a549a44"",
-                    ""path"": ""<Touchscreen>/touch1/position"",
+                    ""id"": ""d3873b53-e22c-4ae4-a795-c8a236d3d60b"",
+                    ""path"": ""<Touchscreen>/delta/y"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Touch1"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""6ea9282b-e08a-4b1c-a472-92a37198719e"",
-                    ""path"": ""<Touchscreen>/touch1/position"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Touch2"",
+                    ""action"": ""Zoom"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -129,10 +69,7 @@ namespace PlayerInput
 }");
             // Camera
             m_Camera = asset.FindActionMap("Camera", throwIfNotFound: true);
-            m_Camera_Rotate = m_Camera.FindAction("Rotate", throwIfNotFound: true);
             m_Camera_Zoom = m_Camera.FindAction("Zoom", throwIfNotFound: true);
-            m_Camera_Touch1 = m_Camera.FindAction("Touch1", throwIfNotFound: true);
-            m_Camera_Touch2 = m_Camera.FindAction("Touch2", throwIfNotFound: true);
         }
 
         public void Dispose()
@@ -192,18 +129,12 @@ namespace PlayerInput
         // Camera
         private readonly InputActionMap m_Camera;
         private ICameraActions m_CameraActionsCallbackInterface;
-        private readonly InputAction m_Camera_Rotate;
         private readonly InputAction m_Camera_Zoom;
-        private readonly InputAction m_Camera_Touch1;
-        private readonly InputAction m_Camera_Touch2;
         public struct CameraActions
         {
             private @PlayerInputActions m_Wrapper;
             public CameraActions(@PlayerInputActions wrapper) { m_Wrapper = wrapper; }
-            public InputAction @Rotate => m_Wrapper.m_Camera_Rotate;
             public InputAction @Zoom => m_Wrapper.m_Camera_Zoom;
-            public InputAction @Touch1 => m_Wrapper.m_Camera_Touch1;
-            public InputAction @Touch2 => m_Wrapper.m_Camera_Touch2;
             public InputActionMap Get() { return m_Wrapper.m_Camera; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -213,44 +144,23 @@ namespace PlayerInput
             {
                 if (m_Wrapper.m_CameraActionsCallbackInterface != null)
                 {
-                    @Rotate.started -= m_Wrapper.m_CameraActionsCallbackInterface.OnRotate;
-                    @Rotate.performed -= m_Wrapper.m_CameraActionsCallbackInterface.OnRotate;
-                    @Rotate.canceled -= m_Wrapper.m_CameraActionsCallbackInterface.OnRotate;
                     @Zoom.started -= m_Wrapper.m_CameraActionsCallbackInterface.OnZoom;
                     @Zoom.performed -= m_Wrapper.m_CameraActionsCallbackInterface.OnZoom;
                     @Zoom.canceled -= m_Wrapper.m_CameraActionsCallbackInterface.OnZoom;
-                    @Touch1.started -= m_Wrapper.m_CameraActionsCallbackInterface.OnTouch1;
-                    @Touch1.performed -= m_Wrapper.m_CameraActionsCallbackInterface.OnTouch1;
-                    @Touch1.canceled -= m_Wrapper.m_CameraActionsCallbackInterface.OnTouch1;
-                    @Touch2.started -= m_Wrapper.m_CameraActionsCallbackInterface.OnTouch2;
-                    @Touch2.performed -= m_Wrapper.m_CameraActionsCallbackInterface.OnTouch2;
-                    @Touch2.canceled -= m_Wrapper.m_CameraActionsCallbackInterface.OnTouch2;
                 }
                 m_Wrapper.m_CameraActionsCallbackInterface = instance;
                 if (instance != null)
                 {
-                    @Rotate.started += instance.OnRotate;
-                    @Rotate.performed += instance.OnRotate;
-                    @Rotate.canceled += instance.OnRotate;
                     @Zoom.started += instance.OnZoom;
                     @Zoom.performed += instance.OnZoom;
                     @Zoom.canceled += instance.OnZoom;
-                    @Touch1.started += instance.OnTouch1;
-                    @Touch1.performed += instance.OnTouch1;
-                    @Touch1.canceled += instance.OnTouch1;
-                    @Touch2.started += instance.OnTouch2;
-                    @Touch2.performed += instance.OnTouch2;
-                    @Touch2.canceled += instance.OnTouch2;
                 }
             }
         }
         public CameraActions @Camera => new CameraActions(this);
         public interface ICameraActions
         {
-            void OnRotate(InputAction.CallbackContext context);
             void OnZoom(InputAction.CallbackContext context);
-            void OnTouch1(InputAction.CallbackContext context);
-            void OnTouch2(InputAction.CallbackContext context);
         }
     }
 }
