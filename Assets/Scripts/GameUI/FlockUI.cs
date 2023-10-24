@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -15,7 +16,11 @@ namespace GameUI
 		
 		public static FlockUI Instance { get; private set; }
 
-		private void Awake() => Instance = this;
+		private void Awake()
+		{
+			Instance = this;
+			StartCoroutine(UpdateFPS());
+		}
 
 		public FlockSettingsGroup AddGroup()
 		{
@@ -25,10 +30,15 @@ namespace GameUI
 			return group;
 		}
 
-		public void UpdateBoidsCount(int count)
+		public void UpdateBoidsCount(int count) => _boidsCount.text = $"Boids: {count}";
+
+		private IEnumerator UpdateFPS()
 		{
-			_boidsCount.text = $"Boids: {count}";
-			_fps.text = $"FPS {1 / Time.deltaTime: #00.0}";
+			while (this != null)
+			{
+				_fps.text = $"FPS {1 / Time.deltaTime: #00.0}";
+				yield return new WaitForSeconds(0.1f);
+			}
 		}
 
 		public void Clear()

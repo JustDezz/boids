@@ -1,4 +1,5 @@
-﻿using Flocks.Jobs;
+﻿using Cysharp.Threading.Tasks;
+using Flocks.Jobs;
 using GameUI;
 using GameUI.Elements;
 using Unity.Collections;
@@ -16,9 +17,12 @@ namespace Flocks.Behaviours
 		[SerializeField] [Min(0)] private int _maxReproductionsPerCall;
 
 		[SerializeField] [Min(0)] private Vector2 _reproductionDelayConstraints;
+		[SerializeField] [Min(0)] private int _boidsCountChangeOnButtonPress;
 
 		private NativeArray<int2> _boidsIndices;
 		private NativeArray<int> _breadedEntities;
+		
+		private int _countChange;
 
 		public float ReproductionDelay { get; set; }
 
@@ -42,7 +46,14 @@ namespace Flocks.Behaviours
 				_reproductionRadius, ReproductionDelay, Time.time);
 			return job.Schedule(flock.NumberOfAgents, dependency);
 		}
-		public override void OnFlockUpdated(Flock flock) => flock.Breed(_breadedEntities[0], _boidsIndices);
+		public override void OnFlockUpdated(Flock flock)
+		{
+			flock.Breed(_breadedEntities[0], _boidsIndices);
+			if (_countChange == 0) return;
+			if (_countChange > 0) flock.SpawnRandomBoids(_countChange);
+			else flock.KillBoids(Mathf.Abs(_countChange));
+			_countChange = 0;
+		}
 
 		private void OnDisable() => Dispose();
 		private void OnDestroy() => Dispose();
@@ -65,6 +76,10 @@ namespace Flocks.Behaviours
 			slider.SetLabel("Recover time");
 			slider.SetValues(_reproductionDelayConstraints.x, _reproductionDelayConstraints.y, _reproductionDelay);
 			slider.ValueChanged += v => ReproductionDelay = v;
+
+			int delta = _boidsCountChangeOnButtonPress;
+			group.AddButton($"Spawn {delta} boids").OnClick.AddListener(() => _countChange += delta);
+			group.AddButton($"Kill {delta} boids").OnClick.AddListener(() => _countChange -= delta);
 		}
 	}
 }

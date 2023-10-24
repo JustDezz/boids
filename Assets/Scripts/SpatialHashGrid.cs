@@ -14,6 +14,8 @@ public struct SpatialHashGrid<T> : IDisposable where T : struct, IEquatable<T>
 	private readonly float3 _gridMax;
 	private NativeMultiHashMap<int, T> _map;
 
+	public bool IsCreated => _map.IsCreated;
+
 	public SpatialHashGrid(Bounds bounds, float3 cellSize, int capacity, Allocator allocator)
 	{
 		_cellSize = cellSize;

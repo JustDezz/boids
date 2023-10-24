@@ -16,3 +16,4 @@ MonoBehaviour:
   _reproductionRadius: 0.6
   _maxReproductionsPerCall: 10
   _reproductionDelayConstraints: {x: 0, y: 5}
+  _boidsCountChangeOnButtonPress: 100

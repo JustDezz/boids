@@ -59,26 +59,37 @@ namespace Flocks
 
 		private void InitAgents()
 		{
-			if (_initialized && _boids.Length != _maxNumberOfAgents) Reinitialize();
+			if (_boidsGrid.IsCreated) _boidsGrid.Dispose();
+			_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
+			
+			if (_initialized)
+			{
+				if (_boids.Length != _maxNumberOfAgents) Reinitialize();
+			}
 			else
 			{
 				_boidsPool = new MultiUnityPool<Transform>(_boidsPrefabs.Select(p => p.transform));
-				_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
 				_boids = new NativeArray<BoidData>(_maxNumberOfAgents, Allocator.Persistent);
 				_spawnedBoids = new Transform[_maxNumberOfAgents];
-				
+				_transformAccessArray = new TransformAccessArray(_maxNumberOfAgents);
 			}
 
-			// Very quick and dirty solution just to get job done
+			// Very quick and dirty solution just to get the job done
 			CreateUI();
-			_initialized = true;
 
-			int toSpawn = _initialNumberOfAgents - NumberOfAgents;
-			if (toSpawn <= 0) return;
+			_lastGridRebuildTime = _initialized ? float.MinValue : Time.time;
+			_initialized = true;
 			
-			float spawnRadius = toSpawn * _density;
+			SpawnRandomBoids(Mathf.Max(_initialNumberOfAgents - NumberOfAgents, 0));
+		}
+
+		public void SpawnRandomBoids(int count)
+		{
+			count = Mathf.Min(count, _maxNumberOfAgents - NumberOfAgents);
+			if (count <= 0) return;
+			float spawnRadius = count * _density;
 			float2 speedLimit = _flockSettings.Speed;
-			for (int i = 0; i < toSpawn; i++)
+			for (int i = 0; i < count; i++)
 			{
 				Vector3 position = Random.insideUnitSphere * spawnRadius;
 				Vector3 direction = Random.onUnitSphere;
@@ -86,8 +97,22 @@ namespace Flocks
 
 				SpawnBoid(position, direction, speed);
 			}
-			_lastGridRebuildTime = Time.time;
-			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
+			_transformAccessArray.SetTransforms(_spawnedBoids);
+		}
+
+		public void KillBoids(int count)
+		{
+			count = Mathf.Min(count, NumberOfAgents);
+			if (count == 0) return;
+			for (int i = 0; i < count; i++)
+			{
+				int lastIndex = NumberOfAgents - 1;
+				Transform spawnedBoid = _spawnedBoids[lastIndex];
+				_boidsPool.Return(spawnedBoid);
+				_spawnedBoids[lastIndex] = null;
+				_boids[lastIndex] = default;
+				NumberOfAgents = lastIndex;
+			}
 		}
 
 		private void CreateUI()
@@ -113,10 +138,8 @@ namespace Flocks
 			Array.Copy(_spawnedBoids, spawnedBoids, _maxNumberOfAgents);
 
 			_boids.Dispose();
-			_boidsGrid.Dispose();
 			_transformAccessArray.Dispose();
 
-			_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
 			_boids = boids;
 			_spawnedBoids = spawnedBoids;
 			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
@@ -216,7 +239,6 @@ namespace Flocks
 			_flockSettings.Validate();
 		
 			if (!Application.isPlaying || Time.frameCount < 1) return;
-			if (_boids.Length == _maxNumberOfAgents) return;
 			InitAgents();
 		}
 	}

@@ -9,6 +9,8 @@ public class World : MonoBehaviour
 	public Bounds SoftBounds => _softBounds;
 	public Bounds HardBounds => _hardBounds;
 
+	private void Awake() => Application.targetFrameRate = int.MaxValue;
+
 	private void OnValidate()
 	{
 		Vector3 hardBoundsMin = Vector3.Min(_hardBounds.min, _softBounds.min);

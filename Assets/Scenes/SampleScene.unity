@@ -476,7 +476,7 @@ MonoBehaviour:
     m_Extent: {x: 10, y: 10, z: 10}
   _hardBounds:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 20, y: 20, z: 20}
+    m_Extent: {x: 25, y: 25, z: 25}
 --- !u!4 &801747284
 Transform:
   m_ObjectHideFlags: 0
@@ -797,7 +797,7 @@ PrefabInstance:
     - target: {fileID: 664054659127159135, guid: 0f78b1cc4eb522a4098416f6292e239a,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 66.19
       objectReference: {fileID: 0}
     - target: {fileID: 664054659127159135, guid: 0f78b1cc4eb522a4098416f6292e239a,
         type: 3}
@@ -827,7 +827,7 @@ PrefabInstance:
     - target: {fileID: 664054659813219212, guid: 0f78b1cc4eb522a4098416f6292e239a,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 182.74501
       objectReference: {fileID: 0}
     - target: {fileID: 664054659813219212, guid: 0f78b1cc4eb522a4098416f6292e239a,
         type: 3}
