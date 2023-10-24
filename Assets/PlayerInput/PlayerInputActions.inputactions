@@ -1,0 +1,45 @@
+{
+    "name": "PlayerInputActions",
+    "maps": [
+        {
+            "name": "Camera",
+            "id": "1db67f8f-8a13-4b50-893d-7729d4d113f2",
+            "actions": [
+                {
+                    "name": "Zoom",
+                    "type": "PassThrough",
+                    "id": "05225239-5b93-4b78-95a2-4b4d87ce1981",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "658543b1-3d38-41a7-a266-712dfab93f54",
+                    "path": "<Mouse>/scroll/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Zoom",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d3873b53-e22c-4ae4-a795-c8a236d3d60b",
+                    "path": "<Touchscreen>/delta/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Zoom",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
