@@ -56,7 +56,7 @@ namespace PointsOfInterest
 			_poisGrid = new SpatialHashGrid<int>(_world.HardBounds, _cellSize, _maxNumberOfPoints, Allocator.Persistent);
 			_pois = new NativeArray<PointOfInterestData>(_maxNumberOfPoints, Allocator.Persistent);
 
-			SpawnBatch(_initialNumberOfPoints);
+			SpawnPoIs(_initialNumberOfPoints);
 
 			_isInitialized = true;
 		}
@@ -64,7 +64,7 @@ namespace PointsOfInterest
 		private void Update()
 		{
 			float time = Time.time;
-			if (_nextSpawn <= time) SpawnBatch(_spawnBatchSize.GetRandom(true));
+			if (_nextSpawn <= time) SpawnPoIs(_spawnBatchSize.GetRandom(true));
 			if (_lastGridRebuild + _gridRebuildDelay <= time || _requireGridRebuild) RebuildGrid();
 		}
 
@@ -96,16 +96,16 @@ namespace PointsOfInterest
 #endif
 		}
 
-		private void SpawnBatch(int batchSize)
+		public void SpawnPoIs(int count)
 		{
 			_nextSpawn = Time.time + _respawnTime.GetRandom();
-			batchSize = Mathf.Min(batchSize, _maxNumberOfPoints - NumberOfPoints);
-			if (batchSize == 0) return;
+			count = Mathf.Min(count, _maxNumberOfPoints - NumberOfPoints);
+			if (count == 0) return;
 			
 			Bounds bounds = _world.SoftBounds;
 			float3 min = bounds.min;
 			float3 max = bounds.max;
-			for (int i = 0; i < batchSize; i++)
+			for (int i = 0; i < count; i++)
 			{
 				float3 normalizedPosition = new(Random.value, Random.value, Random.value);
 				float3 position = math.lerp(min, max, normalizedPosition);

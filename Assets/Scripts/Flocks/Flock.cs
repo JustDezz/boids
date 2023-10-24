@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Flocks.Behaviours;
 using Flocks.Jobs;
+using GameUI;
 using Tools.Pool;
 using Tools.RestrictTypeAttribute;
 using Tools.UnwrapNestingAttribute;
@@ -58,35 +59,18 @@ namespace Flocks
 
 		private void InitAgents()
 		{
-			if (_initialized && _boids.Length != _maxNumberOfAgents)
-			{
-				int previousLength = _boids.Length;
-
-				int toDestroy = NumberOfAgents - _maxNumberOfAgents;
-				for (int i = 0; i < toDestroy; i++) _boidsPool.Return(_spawnedBoids[--NumberOfAgents]);
-				
-				NativeArray<BoidData> boids = new(_maxNumberOfAgents, Allocator.Persistent);
-				NativeArray<BoidData>.Copy(_boids, boids, Mathf.Min(previousLength, _maxNumberOfAgents));
-				Transform[] spawnedBoids = new Transform[_maxNumberOfAgents];
-				Array.Copy(_spawnedBoids, spawnedBoids, _maxNumberOfAgents);
-				
-				_boids.Dispose();
-				_boidsGrid.Dispose();
-				_transformAccessArray.Dispose();
-
-				_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
-				_boids = boids;
-				_spawnedBoids = spawnedBoids;
-				_transformAccessArray = new TransformAccessArray(_spawnedBoids);
-			}
+			if (_initialized && _boids.Length != _maxNumberOfAgents) Reinitialize();
 			else
 			{
 				_boidsPool = new MultiUnityPool<Transform>(_boidsPrefabs.Select(p => p.transform));
 				_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
 				_boids = new NativeArray<BoidData>(_maxNumberOfAgents, Allocator.Persistent);
 				_spawnedBoids = new Transform[_maxNumberOfAgents];
+				
 			}
 
+			// Very quick and dirty solution just to get job done
+			CreateUI();
 			_initialized = true;
 
 			int toSpawn = _initialNumberOfAgents - NumberOfAgents;
@@ -103,6 +87,38 @@ namespace Flocks
 				SpawnBoid(position, direction, speed);
 			}
 			_lastGridRebuildTime = Time.time;
+			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
+		}
+
+		private void CreateUI()
+		{
+			FlockSettingsUI.Instance.Clear();
+			foreach (Object behaviour in _behaviours)
+			{
+				if (behaviour is IAdjustableBehaviour adjustableBehaviour)
+					adjustableBehaviour.CreateUI(FlockSettingsUI.Instance);
+			}
+		}
+
+		private void Reinitialize()
+		{
+			int previousLength = _boids.Length;
+
+			int toDestroy = NumberOfAgents - _maxNumberOfAgents;
+			for (int i = 0; i < toDestroy; i++) _boidsPool.Return(_spawnedBoids[--NumberOfAgents]);
+
+			NativeArray<BoidData> boids = new(_maxNumberOfAgents, Allocator.Persistent);
+			NativeArray<BoidData>.Copy(_boids, boids, Mathf.Min(previousLength, _maxNumberOfAgents));
+			Transform[] spawnedBoids = new Transform[_maxNumberOfAgents];
+			Array.Copy(_spawnedBoids, spawnedBoids, _maxNumberOfAgents);
+
+			_boids.Dispose();
+			_boidsGrid.Dispose();
+			_transformAccessArray.Dispose();
+
+			_boidsGrid = new SpatialHashGrid<int>(HardBounds, _cellSize, _maxNumberOfAgents, Allocator.Persistent);
+			_boids = boids;
+			_spawnedBoids = spawnedBoids;
 			_transformAccessArray = new TransformAccessArray(_spawnedBoids);
 		}
 
@@ -131,7 +147,6 @@ namespace Flocks
 
 			_jobHandle = handle;
 		}
-
 		private void LateUpdate()
 		{
 			_jobHandle.Complete();
@@ -141,6 +156,7 @@ namespace Flocks
 				behaviour.OnFlockUpdated(this);
 			}
 		}
+		private void OnDestroy() => Dispose();
 
 		public void Breed(int count, NativeArray<int2> indices)
 		{
@@ -161,8 +177,6 @@ namespace Flocks
 			}
 			_transformAccessArray.SetTransforms(_spawnedBoids);
 		}
-
-		private void OnDestroy() => Dispose();
 
 		private JobHandle ScheduleBehaviours(IFlockBehaviour.ScheduleTiming timing, JobHandle dependency)
 		{
